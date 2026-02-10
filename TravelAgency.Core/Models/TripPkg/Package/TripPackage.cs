@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
 
-namespace TravelAgency.Core.Models.TripPackage
+namespace TravelAgency.Core.Models.TripPkg.Package
 {
     public class TripPackage
     {

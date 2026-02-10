@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TravelAgency.Core.Models.TripPackage
+namespace TravelAgency.Core.Models.TripPkg.Package
 {
     public class TripDay
     {

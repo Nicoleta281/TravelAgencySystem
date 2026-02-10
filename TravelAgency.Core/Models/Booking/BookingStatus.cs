@@ -4,12 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TravelAgency.Core.Models.TripPackage
+namespace TravelAgency.Core.Models.Booking
 {
-    public class Season
+    public class BookingStatus
     {
         public string Name { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
     }
 }
