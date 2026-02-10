@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
+using TravelAgency.Core.Models.Users.Access;
 
-namespace TravelAgency.Core.Models
+namespace TravelAgency.Core.Models.Users
 {
    public abstract class User : ILogin
     {
