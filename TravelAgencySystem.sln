@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36623.8 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TravelAgency.Core", "TravelAgency.Core\TravelAgency.Core.csproj", "{1459E293-5F79-4E9F-BFEB-FE177F139F2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TravelAgency.WPF", "TravelAgency.WPF\TravelAgency.WPF.csproj", "{BCAC2A1D-C618-4683-A44D-D2CA69DF2899}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{1459E293-5F79-4E9F-BFEB-FE177F139F2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1459E293-5F79-4E9F-BFEB-FE177F139F2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1459E293-5F79-4E9F-BFEB-FE177F139F2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCAC2A1D-C618-4683-A44D-D2CA69DF2899}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCAC2A1D-C618-4683-A44D-D2CA69DF2899}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCAC2A1D-C618-4683-A44D-D2CA69DF2899}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCAC2A1D-C618-4683-A44D-D2CA69DF2899}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

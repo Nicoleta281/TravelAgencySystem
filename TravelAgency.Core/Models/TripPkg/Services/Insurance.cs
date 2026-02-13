@@ -5,11 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
 
-namespace TravelAgency.Core.Models.TripPkg.Transport
+namespace TravelAgency.Core.Models.TripPkg.Services
 {
-    public class Train :ITransport
+    public class Insurance : IExtraService
     {
-        public void Travel() { }
-
+        public void ApplyService() { }
     }
 }

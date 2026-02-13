@@ -5,11 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
 
-namespace TravelAgency.Core.Models.TripPkg.Transport
+namespace TravelAgency.Core.Factories
 {
-    public class Train :ITransport
+    public abstract class TransportFactory
     {
-        public void Travel() { }
-
+        public abstract ITransport CreateTransport();
     }
 }

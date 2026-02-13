@@ -1,0 +1,32 @@
+﻿<Window x:Class="TravelAgency.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Travel Agency Demo" Height="250" Width="400">
+    <Grid Margin="20">
+        <StackPanel>
+            <TextBlock Text="Trip Type:" FontSize="16"/>
+            <ComboBox x:Name="TripTypeCombo" Margin="0,0,0,10">
+                <ComboBoxItem Content="Budget"/>
+                <ComboBoxItem Content="Premium"/>
+            </ComboBox>
+
+            <TextBlock Text="Transport Type:" FontSize="16"/>
+            <ComboBox x:Name="TransportCombo" Margin="0,0,0,10">
+                <ComboBoxItem Content="Plane"/>
+                <ComboBoxItem Content="Bus"/>
+                <ComboBoxItem Content="Train"/>
+            </ComboBox>
+
+            <Button Content="Create Trip"
+        Height="40"
+        Click="CreateTrip_Click"/>
+
+            <TextBlock x:Name="ResultText"
+           Margin="0,20,0,0"
+           FontSize="16"
+           FontWeight="Bold"/>
+
+
+        </StackPanel>
+    </Grid>
+</Window>
