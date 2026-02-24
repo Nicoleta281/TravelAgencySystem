@@ -6,6 +6,7 @@ using TravelAgency.Core.Factories;
 using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Singletons;
 
 namespace TravelAgency.WPF
 {
@@ -17,6 +18,7 @@ namespace TravelAgency.WPF
         {
             InitializeComponent();
             TripsList.ItemsSource = _trips;
+            TripsList.ItemsSource = TripRepository.Instance.Trips;
         }
 
 
@@ -101,7 +103,13 @@ namespace TravelAgency.WPF
                 .Build();
             _trips.Add(trip);
             TripsList.SelectedItem = trip;
+            var cfg = AppConfig.Instance;
 
+            decimal basePrice = (decimal)trip.Price;
+            decimal finalPrice = cfg.FinalPrice(basePrice);
+
+            ResultText.Text =
+                $"Builder: {trip.Name} | Base: {basePrice} {cfg.Currency} | Final: {finalPrice:F2} {cfg.Currency}";
 
             ResultText.Text =
                 $"Builder: {trip.Name} created with {trip.Transport.GetType().Name} + {trip.Stay.GetType().Name}";
@@ -123,6 +131,8 @@ namespace TravelAgency.WPF
 
             ResultText.Text = $"Prototype: cloned '{selected.Name}' -> '{clone.Name}'";
         }
+
+
 
     }
 }
