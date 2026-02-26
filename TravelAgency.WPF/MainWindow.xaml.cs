@@ -1,83 +1,53 @@
-﻿using System;
+﻿
+
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
-using TravelAgency.Core.Factories;
-using TravelAgency.Core.Interfaces;
-using TravelAgency.Core.Models;
+
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Singletons;
+using TravelAgency.Core.Services;
+using TravelAgency.Core.Data.Repositories;
 
 namespace TravelAgency.WPF
 {
     public partial class MainWindow : Window
     {
         private readonly ObservableCollection<TripPackage> _trips = new();
+        private readonly TripCreationService _tripCreationService = new();
+        private readonly ITripPackageRepository _repo = new EfTripPackageRepository();
 
         public MainWindow()
         {
             InitializeComponent();
-            TripsList.ItemsSource = _trips;
-            TripsList.ItemsSource = TripRepository.Instance.Trips;
-        }
 
+            TripsList.ItemsSource = _trips;
+
+         
+
+            // Load din DB prin repo
+            foreach (var trip in _repo.GetAll())
+                _trips.Add(trip);
+        }
 
         private void CreateTrip_Click(object sender, RoutedEventArgs e)
         {
-            var tripType = (TripTypeCombo.SelectedItem as ComboBoxItem)?.Content.ToString();
-            var transportType = (TransportCombo.SelectedItem as ComboBoxItem)?.Content.ToString();
+            var tripType = (TripTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Budget";
+            var transportType = (TransportCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Train";
 
-            // ===== Abstract Factory =====
-            ITripComponentFactory componentFactory =
-                tripType == "Premium" ? new PremiumTripFactory() : new BudgetTripFactory();
-
-            // ===== Factory Method =====
-            TransportFactory transportFactory = transportType switch
-            {
-                "Plane" => new PlaneFactory(),
-                "Bus" => new BusFactory(),
-                _ => new TrainFactory()
-            };
-
-            // Factory Method: creezi transportul
-            ITransport transport = transportFactory.CreateTransport();
-
-            // Abstract Factory: restul componentelor
-            var assembly = new TripAssembly(
-                transport,
-                componentFactory.CreateStay(),
-                componentFactory.CreateExtraService()
+            var trip = _tripCreationService.CreateTrip(
+                tripType: tripType,
+                transportType: transportType,
+                name: $"{tripType} {transportType} Trip",
+                price: tripType == "Premium" ? 2000 : 1000
             );
 
-            ResultText.Text = $"{tripType} trip created with {transport.GetType().Name}.";
+            _repo.Add(trip);         
+            _trips.Add(trip);         
+            TripsList.SelectedItem = trip;
+
+            ResultText.Text = $"{tripType} trip created with {trip.Transport.GetType().Name} + {trip.Stay.GetType().Name}.";
         }
-
-        private void CreateBudgetTrip_Click(object sender, RoutedEventArgs e)
-        {
-            ITripComponentFactory factory = new BudgetTripFactory();
-
-            var trip = new TripAssembly(
-                factory.CreateTransport(),
-                factory.CreateStay(),
-                factory.CreateExtraService()
-            );
-
-            ResultText.Text = "Budget Trip created: Bus + Hostel + Breakfast";
-        }
-
-        private void CreatePremiumTrip_Click(object sender, RoutedEventArgs e)
-        {
-            ITripComponentFactory factory = new PremiumTripFactory();
-
-            var trip = new TripAssembly(
-                factory.CreateTransport(),
-                factory.CreateStay(),
-                factory.CreateExtraService()
-            );
-
-            ResultText.Text = "Premium Trip created: Plane + Hotel + Guide";
-        }
-
         private void CreateTrip_Builder_Click(object sender, RoutedEventArgs e)
         {
             var season = new TravelAgency.Core.Models.TripPkg.Package.Season
@@ -92,28 +62,26 @@ namespace TravelAgency.WPF
                 .WithPrice(1200)
                 .WithSeason(season)
                 .WithTransport(new TravelAgency.Core.Models.TripPkg.Transport.Plane())
-                .WithStay(new TravelAgency.Core.Models.TripPkg.Stay.Hotel
-                {
-                    Name = "Hotel Roma",
-                    Address = "Center"
-                })
+                .WithStay(new TravelAgency.Core.Models.TripPkg.Stay.Hotel { Name = "Hotel Roma", Address = "Center" })
                 .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Guide())
                 .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Breakfast())
                 .WithDay(new TravelAgency.Core.Models.TripPkg.Package.TripDay())
                 .Build();
+
+            // UI list
             _trips.Add(trip);
             TripsList.SelectedItem = trip;
-            var cfg = AppConfig.Instance;
 
+            // DB save (Supabase Postgres)
+            _repo.Add(trip);
+
+            var cfg = AppConfig.Instance;
             decimal basePrice = (decimal)trip.Price;
             decimal finalPrice = cfg.FinalPrice(basePrice);
 
             ResultText.Text =
-                $"Builder: {trip.Name} | Base: {basePrice} {cfg.Currency} | Final: {finalPrice:F2} {cfg.Currency}";
-
-            ResultText.Text =
-                $"Builder: {trip.Name} created with {trip.Transport.GetType().Name} + {trip.Stay.GetType().Name}";
-
+                $"Builder: {trip.Name} | Base: {basePrice} {cfg.Currency} | Final: {finalPrice:F2} {cfg.Currency}\n" +
+                $"Created with {trip.Transport.GetType().Name} + {trip.Stay.GetType().Name}";
         }
         private void CloneTrip_Click(object sender, RoutedEventArgs e)
         {
@@ -129,9 +97,10 @@ namespace TravelAgency.WPF
             _trips.Add(clone);
             TripsList.SelectedItem = clone;
 
+            _repo.Add(clone);
+
             ResultText.Text = $"Prototype: cloned '{selected.Name}' -> '{clone.Name}'";
         }
-
 
 
     }

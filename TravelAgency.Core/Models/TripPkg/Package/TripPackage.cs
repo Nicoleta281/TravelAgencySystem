@@ -8,19 +8,22 @@ namespace TravelAgency.Core.Models.TripPkg.Package
 {
     public class TripPackage : IPrototype<TripPackage>
     {
-        public TripPackage()
-        {
-        }
-
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public double Price { get; set; }
-        public Season Season { get; set; }
+        public Season? Season { get; set; }
 
         public List<TripDay> Days { get; set; } = new();
 
-        public ITransport Transport { get; set; }
-        public IStay Stay { get; set; }
+        public ITransport? Transport { get; set; }
+        public IStay? Stay { get; set; }
         public List<IExtraService> ExtraServices { get; set; } = new();
+
+        // ===== Helpers pentru UI =====
+        public string TransportName => Transport?.GetType().Name ?? "N/A";
+        public string StayName => Stay?.GetType().Name ?? "N/A";
+
+        public IEnumerable<string> ExtraServiceNames =>
+            ExtraServices?.Select(x => x.GetType().Name) ?? Enumerable.Empty<string>();
 
         public void AddDay(TripDay day)
         {
@@ -35,39 +38,43 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         }
 
         // ===== Prototype =====
-
-        public TripPackage ShallowClone()
-        {
-            return (TripPackage)this.MemberwiseClone();
-        }
+        public TripPackage ShallowClone() => (TripPackage)MemberwiseClone();
 
         public TripPackage DeepClone()
         {
-            var copy = (TripPackage)this.MemberwiseClone();
+            var copy = (TripPackage)MemberwiseClone();
 
-            // Season e clasă -> copiem obiectul (altfel se partajează referința)
-            if (this.Season != null)
+            if (Season != null)
             {
                 copy.Season = new Season
                 {
-                    Name = this.Season.Name,
-                    StartDate = this.Season.StartDate,
-                    EndDate = this.Season.EndDate
+                    Name = Season.Name,
+                    StartDate = Season.StartDate,
+                    EndDate = Season.EndDate
                 };
             }
 
-            // Listă nouă pentru ExtraServices
-            copy.ExtraServices = this.ExtraServices?.ToList() ?? new List<IExtraService>();
+            copy.ExtraServices = ExtraServices?.ToList() ?? new List<IExtraService>();
+            copy.Days = Days?.ToList() ?? new List<TripDay>();
 
-            // Days: pentru deep clone adevărat avem nevoie de DeepClone și în TripDay.
-            // Temporar facem copie de listă (shallow asupra obiectelor TripDay).
-            copy.Days = this.Days?.ToList() ?? new List<TripDay>();
-
-            // Transport/Stay: lăsăm referință (shallow) până implementăm Prototype și la ele
-            copy.Transport = this.Transport;
-            copy.Stay = this.Stay;
+            // Transport/Stay rămân shallow (deocamdată)
+            copy.Transport = Transport;
+            copy.Stay = Stay;
 
             return copy;
+        }
+
+        public override string ToString()
+        {
+            var extras = ExtraServices != null && ExtraServices.Count > 0
+                ? string.Join(", ", ExtraServices.Select(x => x.GetType().Name))
+                : "None";
+
+            var seasonText = Season != null
+                ? $"{Season.Name} ({Season.StartDate:yyyy-MM-dd} → {Season.EndDate:yyyy-MM-dd})"
+                : "No season";
+
+            return $"{Name} | {Price:F2} | {seasonText} | {TransportName} | {StayName} | Extras: {extras}";
         }
     }
 }

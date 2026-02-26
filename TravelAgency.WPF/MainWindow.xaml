@@ -1,7 +1,7 @@
 ﻿<Window x:Class="TravelAgency.WPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Travel Agency Demo" Height="396" Width="516">
+        Title="Travel Agency Demo" Height="658" Width="823">
     <Grid Margin="20">
         <StackPanel>
             <TextBlock Text="Trip Type:" FontSize="16"/>
@@ -34,19 +34,82 @@
 
             <TextBlock Text="Trips created:" FontSize="16" Margin="0,15,0,5"/>
 
-            <ListBox x:Name="TripsList"
-         Height="120"
-         DisplayMemberPath="Name"
-         Margin="0,0,0,10"/>
+            <ListBox x:Name="TripsList" Margin="0,8,0,0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="12"
+        Padding="12"
+        Margin="0,0,0,10"
+        Background="White"
+        BorderBrush="#E5E7EB"
+        BorderThickness="1">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.15"/>
+                            </Border.Effect>
+
+                            <StackPanel>
+
+                                <TextBlock Text="{Binding Name}"
+                   FontSize="16"
+                   FontWeight="SemiBold" />
+
+                                <TextBlock Margin="0,4,0,0"
+                   Text="{Binding Price, StringFormat=Price: {0:F2}}"
+                   Foreground="#444" />
+
+                                <TextBlock Margin="0,2,0,0" Foreground="#444">
+            <Run Text="Season: " />
+            <Run Text="{Binding Season.Name}" />
+            <Run Text=" (" />
+            <Run Text="{Binding Season.StartDate, StringFormat={}{0:yyyy-MM-dd}}" />
+            <Run Text=" → " />
+            <Run Text="{Binding Season.EndDate, StringFormat={}{0:yyyy-MM-dd}}" />
+            <Run Text=")" />
+                                </TextBlock>
+
+                                <TextBlock Margin="0,6,0,0" Foreground="#222">
+            <Run Text="Transport: " FontWeight="SemiBold"/>
+            <Run Text="{Binding TransportName, Mode=OneWay}" />
+            <Run Text="   |   " />
+            <Run Text="Stay: " FontWeight="SemiBold"/>
+            <Run Text="{Binding StayName, Mode=OneWay}" />
+                                </TextBlock>
+
+                                <TextBlock Margin="0,6,0,2"
+                   FontWeight="SemiBold"
+                   Foreground="#222"
+                   Text="Extras:"/>
+
+                                <ItemsControl ItemsSource="{Binding ExtraServiceNames, Mode=OneWay}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="12"
+                            Padding="8,3"
+                            Margin="0,0,6,6"
+                            Background="#EEF2FF"
+                            BorderBrush="#CBD5E1"
+                            BorderThickness="1">
+                                                <TextBlock Text="{Binding}" FontSize="12" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
             <Button Content="Clone Selected Trip (Prototype)"
         Height="35"
         Click="CloneTrip_Click"/>
-
-            <Button Content="Clone Selected Trip (Prototype)"
-        Height="35"
-        Click="CloneTrip_Click"/>
-
 
         </StackPanel>
     </Grid>
