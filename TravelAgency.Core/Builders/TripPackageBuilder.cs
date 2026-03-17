@@ -1,5 +1,8 @@
-﻿using TravelAgency.Core.Interfaces;
+﻿using System.ComponentModel.DataAnnotations;
+using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models.TripPkg.Package;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace TravelAgency.Core.Builders
 {
@@ -32,21 +35,13 @@ namespace TravelAgency.Core.Builders
 
         public TripPackage Build()
         {
-            if (string.IsNullOrWhiteSpace(_trip.Name))
-                throw new InvalidOperationException("TripPackage trebuie să aibă Name.");
+            var validator = new TripPackageValidator();
+            var result = validator.Validate(_trip);
 
-            if (_trip.Price <= 0)
-                throw new InvalidOperationException("TripPackage trebuie să aibă Price > 0.");
-
-            if (_trip.Transport == null)
-                throw new InvalidOperationException("TripPackage trebuie să aibă Transport.");
-
-            if (_trip.Stay == null)
-                throw new InvalidOperationException("TripPackage trebuie să aibă Stay.");
-
-            if (_trip.Days == null || _trip.Days.Count == 0)
-                throw new InvalidOperationException("TripPackage trebuie să aibă cel puțin o zi.");
-
+            if (!result.IsValid)
+            {
+                throw new InvalidOperationException(result.Errors[0].ErrorMessage);
+            }
             return _trip;
         }
     }

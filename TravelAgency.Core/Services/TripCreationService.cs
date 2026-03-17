@@ -1,46 +1,32 @@
-﻿using System;
-using TravelAgency.Core.Builders;
-using TravelAgency.Core.Factories;
-using TravelAgency.Core.Interfaces;
+﻿using TravelAgency.Core.Builders;
+using TravelAgency.Core.Factories.AbstractFactory;
+using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 
 namespace TravelAgency.Core.Services
 {
     public class TripCreationService
     {
-        public TripPackage CreateTrip(string tripType, string transportType, string name, double price)
+        public TripPackage CreateTrip(TripRequest request)
         {
-            // Abstract Factory: familia Premium/Budget
-            ITripComponentFactory componentFactory =
-                tripType == "Premium" ? new PremiumTripFactory() : new BudgetTripFactory();
+            ITripComponentFactory factory = request.TripType == "Premium"
+                ? new PremiumTripFactory()
+                : new BudgetTripFactory();
 
-            // Factory Method: transportul ales
-            TransportFactory transportFactory = transportType switch
-            {
-                "Plane" => new PlaneFactory(),
-                "Bus" => new BusFactory(),
-                _ => new TrainFactory()
-            };
+            var transport = factory.CreateTransport(request.TransportType);
+            var stay = factory.CreateStay();
+            var extraService = factory.CreateExtraService();
 
-            var transport = transportFactory.CreateTransport();
-
-            var season = new Season
-            {
-                Name = "Default",
-                StartDate = DateTime.Today,
-                EndDate = DateTime.Today.AddMonths(3)
-            };
-
-            // Builder: asamblează TripPackage final
-            return new TripPackageBuilder()
-                .WithName(name)
-                .WithPrice(price)
-                .WithSeason(season)
+            var trip = new TripPackageBuilder()
+                .WithName(request.Name)
+                .WithPrice(request.Price)
                 .WithTransport(transport)
-                .WithStay(componentFactory.CreateStay())
-                .WithExtra(componentFactory.CreateExtraService())
+                .WithStay(stay)
+                .WithExtra(extraService)
                 .WithDay(new TripDay())
                 .Build();
+
+            return trip;
         }
     }
 }

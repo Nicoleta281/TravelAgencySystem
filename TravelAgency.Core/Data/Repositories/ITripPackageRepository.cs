@@ -7,5 +7,9 @@ namespace TravelAgency.Core.Data.Repositories
     {
         IReadOnlyList<TripPackage> GetAll();
         TripPackage Add(TripPackage trip);
+
+        void Delete(int id);
+        void Update(TripPackage trip);
+
     }
 }

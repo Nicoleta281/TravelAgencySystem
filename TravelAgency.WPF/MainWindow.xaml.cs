@@ -3,11 +3,11 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
-
-using TravelAgency.Core.Models.TripPkg.Package;
-using TravelAgency.Core.Singletons;
-using TravelAgency.Core.Services;
 using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Models;
+using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Services;
+using TravelAgency.Core.Singletons;
 
 namespace TravelAgency.WPF
 {
@@ -32,21 +32,31 @@ namespace TravelAgency.WPF
 
         private void CreateTrip_Click(object sender, RoutedEventArgs e)
         {
-            var tripType = (TripTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Budget";
-            var transportType = (TransportCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Train";
+            try
+            {
+                var tripType = (TripTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Budget";
+                var transportType = (TransportCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Train";
 
-            var trip = _tripCreationService.CreateTrip(
-                tripType: tripType,
-                transportType: transportType,
-                name: $"{tripType} {transportType} Trip",
-                price: tripType == "Premium" ? 2000 : 1000
-            );
+                var request = new TripRequest
+                {
+                    Name = $"{tripType} {transportType} Trip",
+                    Price = tripType == "Premium" ? 2000 : 1000,
+                    TripType = tripType,
+                    TransportType = transportType
+                };
 
-            _repo.Add(trip);         
-            _trips.Add(trip);         
-            TripsList.SelectedItem = trip;
+                var trip = _tripCreationService.CreateTrip(request);
 
-            ResultText.Text = $"{tripType} trip created with {trip.Transport.GetType().Name} + {trip.Stay.GetType().Name}.";
+                _repo.Add(trip);
+                _trips.Add(trip);
+                TripsList.SelectedItem = trip;
+
+                ResultText.Text = $"{tripType} trip created with {trip.Transport.GetType().Name} + {trip.Stay.GetType().Name}.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Eroare", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         private void CreateTrip_Builder_Click(object sender, RoutedEventArgs e)
         {

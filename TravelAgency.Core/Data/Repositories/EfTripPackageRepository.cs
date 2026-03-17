@@ -22,5 +22,40 @@ namespace TravelAgency.Core.Data.Repositories
             db.SaveChanges();
             return trip;
         }
+
+        public void Delete(int id)
+        {
+            using var db = TravelAgencyDbContextFactory.Create();
+            var entity = db.TripPackages.FirstOrDefault(x => x.Id == id);
+            if (entity == null)
+                return;
+
+            db.TripPackages.Remove(entity);
+            db.SaveChanges();
+
+        }
+
+        public  void Update (TripPackage trip)
+        {
+            using var db = TravelAgencyDbContextFactory.Create();
+
+            var entity = db.TripPackages.FirstOrDefault(x => x.Id == trip.Id);
+
+            if (entity == null)
+                return;
+
+            var mapped =TripPackageMapper.ToEntity(trip);
+
+            entity.Name = mapped.Name;
+            entity.Price = mapped.Price;
+            entity.SeasonName = mapped.SeasonName;
+            entity.SeasonStartDate = mapped.SeasonStartDate;
+            entity.SeasonEndDate = mapped.SeasonEndDate;
+            entity.TransportType= mapped.TransportType;
+            entity.ExtraServices = mapped.ExtraServices;
+
+            db.SaveChanges ();
+        }
+
     }
 }

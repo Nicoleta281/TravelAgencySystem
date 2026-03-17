@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models.TripPkg.Transport;
 
-namespace TravelAgency.Core.Factories
+namespace TravelAgency.Core.Factories.FactoryMethod
 {
     public class PlaneFactory :TransportFactory
     {

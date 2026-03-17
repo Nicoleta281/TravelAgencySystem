@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
 
-namespace TravelAgency.Core.Factories
+namespace TravelAgency.Core.Factories.FactoryMethod
 {
     public abstract class TransportFactory
     {

@@ -9,14 +9,23 @@ namespace TravelAgency.Core.Data.Mappers
     {
         public static TripPackageEntity ToEntity(TripPackage trip)
         {
+            var season = trip.Season ?? new Season
+            {
+                
+                Name = "Default",
+                StartDate = DateTime.Now,
+                EndDate = DateTime.Now.AddMonths(3)
+            };
+
             return new TripPackageEntity
             {
+                Id = trip.Id,
                 Name = trip.Name,
                 Price = trip.Price,
 
-                SeasonName = trip.Season?.Name ?? "",
-                SeasonStartDate = DateTime.SpecifyKind(trip.Season.StartDate, DateTimeKind.Utc),
-                SeasonEndDate = DateTime.SpecifyKind(trip.Season.EndDate, DateTimeKind.Utc),
+                SeasonName = season.Name,
+                SeasonStartDate = DateTime.SpecifyKind(season.StartDate, DateTimeKind.Utc),
+                SeasonEndDate = DateTime.SpecifyKind(season.EndDate, DateTimeKind.Utc),
 
                 TransportType = trip.Transport?.GetType().Name ?? "",
                 StayType = trip.Stay?.GetType().Name ?? "",
@@ -27,7 +36,7 @@ namespace TravelAgency.Core.Data.Mappers
         public static TripPackage FromEntity(TripPackageEntity e)
         {
             return new TripPackage
-            {
+            {   Id = e.Id,
                 Name = e.Name,
                 Price = e.Price,
                 Season = new Season

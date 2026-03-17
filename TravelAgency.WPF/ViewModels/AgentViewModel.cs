@@ -1,12 +1,14 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using Microsoft.EntityFrameworkCore;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
+using System.Linq;
 
 namespace TravelAgency.WPF.ViewModels
 {
@@ -17,6 +19,7 @@ namespace TravelAgency.WPF.ViewModels
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
 
+   
         private TripPackage? _selectedTrip;
         public TripPackage? SelectedTrip
         {
@@ -26,31 +29,62 @@ namespace TravelAgency.WPF.ViewModels
                 if (Set(ref _selectedTrip, value))
                 {
                     ((RelayCommand)CloneCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)UpdateCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+
+                    if (value != null)
+                    {
+                        Name = value.Name;
+                        PriceText = value.Price.ToString();
+                        TransportType = string.IsNullOrWhiteSpace(value.TransportName) ? "Train" : value.TransportName;
+                    }
                 }
             }
         }
-
         // Form fields
         private string _tripType = "Budget";
-        public string TripType { get => _tripType; set => Set(ref _tripType, value); }
+        public string TripType
+        {
+            get => _tripType;
+            set => Set(ref _tripType, value);
+        }
 
         private string _transportType = "Train";
-        public string TransportType { get => _transportType; set => Set(ref _transportType, value); }
+        public string TransportType
+        {
+            get => _transportType;
+            set => Set(ref _transportType, value);
+        }
 
         private string _name = "";
-        public string Name { get => _name; set => Set(ref _name, value); }
+        public string Name
+        {
+            get => _name;
+            set => Set(ref _name, value);
+        }
 
         private string _priceText = "1000";
-        public string PriceText { get => _priceText; set => Set(ref _priceText, value); }
+        public string PriceText
+        {
+            get => _priceText;
+            set => Set(ref _priceText, value);
+        }
 
         private string _status = "Ready.";
-        public string Status { get => _status; set => Set(ref _status, value); }
+        public string Status
+        {
+            get => _status;
+            set => Set(ref _status, value);
+        }
 
         // Commands
         public ICommand CreateQuickCommand { get; }
         public ICommand CreateCustomCommand { get; }
         public ICommand CloneCommand { get; }
         public ICommand ReloadCommand { get; }
+
+        public ICommand UpdateCommand { get;  }
+        public ICommand DeleteCommand { get; }
 
         public AgentViewModel()
             : this(new EfTripPackageRepository(), new TripCreationService())
@@ -66,8 +100,9 @@ namespace TravelAgency.WPF.ViewModels
             CreateCustomCommand = new RelayCommand(CreateCustom);
             CloneCommand = new RelayCommand(CloneSelected, () => SelectedTrip != null);
             ReloadCommand = new RelayCommand(LoadTrips);
+            UpdateCommand = new RelayCommand(UpdateSelected, () => SelectedTrip != null);
+            DeleteCommand = new RelayCommand(DeleteSelected, () => SelectedTrip != null);
 
-            // migrate at startup (ok for now)
             using (var db = TravelAgencyDbContextFactory.Create())
                 db.Database.Migrate();
 
@@ -77,6 +112,7 @@ namespace TravelAgency.WPF.ViewModels
         private void LoadTrips()
         {
             Trips.Clear();
+
             foreach (var t in _repo.GetAll())
                 Trips.Add(t);
 
@@ -85,67 +121,166 @@ namespace TravelAgency.WPF.ViewModels
 
         private void CreateQuick()
         {
-            var tripType = string.IsNullOrWhiteSpace(TripType) ? "Budget" : TripType;
-            var transportType = string.IsNullOrWhiteSpace(TransportType) ? "Train" : TransportType;
+            try
+            {
+                var tripType = string.IsNullOrWhiteSpace(TripType) ? "Budget" : TripType;
+                var transportType = string.IsNullOrWhiteSpace(TransportType) ? "Train" : TransportType;
 
-            var name = string.IsNullOrWhiteSpace(Name)
-                ? $"{tripType} {transportType} Trip"
-                : Name.Trim();
+                var name = string.IsNullOrWhiteSpace(Name)
+                    ? $"{tripType} {transportType} Trip"
+                    : Name.Trim();
 
-            if (!double.TryParse(PriceText, out var price))
-                price = tripType == "Premium" ? 2000 : 1000;
+                if (!double.TryParse(PriceText, out var price))
+                    price = tripType == "Premium" ? 2000 : 1000;
 
-            var trip = _tripCreationService.CreateTrip(tripType, transportType, name, price);
+                var request = new TripRequest
+                {
+                    Name = name,
+                    Price = price,
+                    TripType = tripType,
+                    TransportType = transportType
+                };
 
-            _repo.Add(trip);
-            Trips.Add(trip);
-            SelectedTrip = trip;
+                var trip = _tripCreationService.CreateTrip(request);
 
-            Status = $"Created (Quick): {trip.Name} | {trip.TransportName} | {trip.StayName}";
+                _repo.Add(trip);
+                Trips.Add(trip);
+                SelectedTrip = trip;
+
+                Status = $"Created (Quick): {trip.Name} | {trip.TransportName} | {trip.StayName}";
+            }
+            catch (Exception ex)
+            {
+                Status = $"Error: {ex.Message}";
+            }
         }
 
         private void CreateCustom()
         {
-            var season = new Season
+            try
             {
-                Name = "Summer",
-                StartDate = new DateTime(DateTime.Now.Year, 6, 1),
-                EndDate = new DateTime(DateTime.Now.Year, 8, 31)
-            };
+                var season = new Season
+                {
+                    Name = "Summer",
+                    StartDate = new DateTime(DateTime.Now.Year, 6, 1),
+                    EndDate = new DateTime(DateTime.Now.Year, 8, 31)
+                };
 
-            if (!double.TryParse(PriceText, out var price))
-                price = 1200;
+                if (!double.TryParse(PriceText, out var price))
+                    price = 1200;
 
-            var trip = new TravelAgency.Core.Builders.TripPackageBuilder()
-                .WithName(string.IsNullOrWhiteSpace(Name) ? "Builder Trip" : Name.Trim())
-                .WithPrice(price)
-                .WithSeason(season)
-                .WithTransport(new TravelAgency.Core.Models.TripPkg.Transport.Plane())
-                .WithStay(new TravelAgency.Core.Models.TripPkg.Stay.Hotel { Name = "Hotel Roma", Address = "Center" })
-                .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Guide())
-                .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Breakfast())
-                .WithDay(new TripDay())
-                .Build();
+                var trip = new TravelAgency.Core.Builders.TripPackageBuilder()
+                    .WithName(string.IsNullOrWhiteSpace(Name) ? "Builder Trip" : Name.Trim())
+                    .WithPrice(price)
+                    .WithSeason(season)
+                    .WithTransport(new TravelAgency.Core.Models.TripPkg.Transport.Plane())
+                    .WithStay(new TravelAgency.Core.Models.TripPkg.Stay.Hotel
+                    {
+                        Name = "Hotel Roma",
+                        Address = "Center"
+                    })
+                    .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Guide())
+                    .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Breakfast())
+                    .WithDay(new TripDay())
+                    .Build();
 
-            _repo.Add(trip);
-            Trips.Add(trip);
-            SelectedTrip = trip;
+                _repo.Add(trip);
+                Trips.Add(trip);
+                SelectedTrip = trip;
 
-            Status = $"Created (Custom): {trip.Name} | {trip.TransportName} | {trip.StayName}";
+                Status = $"Created (Custom): {trip.Name} | {trip.TransportName} | {trip.StayName}";
+            }
+            catch (Exception ex)
+            {
+                Status = $"Error: {ex.Message}";
+            }
         }
 
         private void CloneSelected()
         {
-            if (SelectedTrip == null) return;
+            try
+            {
+                if (SelectedTrip == null)
+                    return;
 
-            var clone = SelectedTrip.DeepClone();
-            clone.Name = SelectedTrip.Name + " (Clone)";
+                var clone = SelectedTrip.DeepClone();
+                clone.Name = SelectedTrip.Name + " (Clone)";
 
-            _repo.Add(clone);
-            Trips.Add(clone);
-            SelectedTrip = clone;
+                _repo.Add(clone);
+                Trips.Add(clone);
+                SelectedTrip = clone;
 
-            Status = $"Cloned: {clone.Name}";
+                Status = $"Cloned: {clone.Name}";
+            }
+            catch (Exception ex)
+            {
+                Status = $"Error: {ex.Message}";
+            }
+        }
+
+        private void DeleteSelected()
+        {
+            try
+            {
+                if (SelectedTrip == null)
+                    return;
+
+                var id = SelectedTrip.Id;
+
+                _repo.Delete(id);
+                Trips.Remove(SelectedTrip);
+                SelectedTrip = null;
+
+                Status = "Trip deleted successfully.";
+            }
+            catch (Exception ex)
+            {
+                Status = $"Error: {ex.Message}";
+            }
+        }
+
+        private void UpdateSelected()
+        {
+            try
+            {
+                if (SelectedTrip == null)
+                    return;
+
+                var tripType = string.IsNullOrWhiteSpace(TripType) ? "Budget" : TripType;
+                var transportType = string.IsNullOrWhiteSpace(TransportType) ? "Train" : TransportType;
+
+                var name = string.IsNullOrWhiteSpace(Name)
+                    ? SelectedTrip.Name
+                    : Name.Trim();
+
+                if (!double.TryParse(PriceText, out var price))
+                {
+                    Status = "Pret invalid.";
+                    return;
+                }
+
+                var request = new TripRequest
+                {
+                    Name = name,
+                    Price = price,
+                    TripType = tripType,
+                    TransportType = transportType
+                };
+
+                var updatedTrip = _tripCreationService.CreateTrip(request);
+                updatedTrip.Id = SelectedTrip.Id;
+
+                _repo.Update(updatedTrip);
+
+                LoadTrips();
+                SelectedTrip = Trips.FirstOrDefault(x => x.Id == updatedTrip.Id);
+
+                Status = "Trip updated successfully.";
+            }
+            catch (Exception ex)
+            {
+                Status = $"Error: {ex.Message}";
+            }
         }
     }
 }
