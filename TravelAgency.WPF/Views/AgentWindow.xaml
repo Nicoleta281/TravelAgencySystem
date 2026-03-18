@@ -75,11 +75,6 @@
 
         <!-- Main Content -->
         <Grid Grid.Column="1" Margin="24">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="43*"/>
-                <ColumnDefinition Width="181*"/>
-                <ColumnDefinition Width="908*"/>
-            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="120"/>
@@ -110,14 +105,33 @@
                                    Margin="0,6,0,0"/>
                     </StackPanel>
 
-                    <TextBox Grid.Column="1"
-         Height="42"
-         VerticalAlignment="Center"
-         Margin="16,0,16,0"
-         Padding="14,0"
-         VerticalContentAlignment="Center"
-         FontSize="14"
-         Text="Search packages..."/>
+                    <Grid Grid.Column="1"
+      Margin="16,0,16,0"
+      VerticalAlignment="Center">
+                        <TextBox x:Name="SearchBox"
+             Height="42"
+             Padding="14,0"
+             VerticalContentAlignment="Center"
+             FontSize="14"
+             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Search packages..."
+               Margin="14,0,0,0"
+               VerticalAlignment="Center"
+               Foreground="#9CA3AF"
+               IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
 
                     <Button Grid.Column="2"
         Content="Create Package"
@@ -132,7 +146,7 @@
             </Border>
 
             <!-- Stats -->
-            <Grid Grid.Row="1" Margin="0,0,0,18" Grid.ColumnSpan="3">
+            <Grid Grid.Row="1" Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="18"/>
@@ -146,28 +160,44 @@
                 <Border Grid.Column="0" Background="White" CornerRadius="16" Padding="20">
                     <StackPanel>
                         <TextBlock Text="Total Packages" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="128" FontSize="28" FontWeight="Bold" Foreground="#1F2937" Margin="0,10,0,0"/>
+                        <TextBlock Text="{Binding TotalPackagesCount}"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"
+                       Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Column="2" Background="White" CornerRadius="16" Padding="20">
                     <StackPanel>
                         <TextBlock Text="Active Offers" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="45" FontSize="28" FontWeight="Bold" Foreground="#1F2937" Margin="0,10,0,0"/>
+                        <TextBlock Text="{Binding ActiveOffersCount}"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"
+                       Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Column="4" Background="White" CornerRadius="16" Padding="20">
                     <StackPanel>
-                        <TextBlock Text="Top Destination" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="Rome, Italy" FontSize="24" FontWeight="Bold" Foreground="#1F2937" Margin="0,10,0,0"/>
+                        <TextBlock Text="Average Price" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding AveragePriceText, StringFormat=€ {0}}"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"
+                       Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Column="6" Background="White" CornerRadius="16" Padding="20">
                     <StackPanel>
-                        <TextBlock Text="Monthly Revenue" FontSize="14" Foreground="#6B7280"/>
-                        <TextBlock Text="€52,400" FontSize="28" FontWeight="Bold" Foreground="#1F2937" Margin="0,10,0,0"/>
+                        <TextBlock Text="Total Value" FontSize="14" Foreground="#6B7280"/>
+                        <TextBlock Text="{Binding TotalValueText, StringFormat=€ {0}}"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"
+                       Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -185,252 +215,156 @@
         Background="White"
         CornerRadius="16"
         Padding="20">
-                    <StackPanel>
-                        <TextBlock Text="Recent Packages"
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                   Text="Recent Packages"
                    FontSize="22"
                    FontWeight="Bold"
                    Foreground="#1F2937"
                    Margin="0,0,0,16"/>
 
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-                            <WrapPanel Margin="0,4,0,0">
+                        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding TripsView}"
+                 SelectedItem="{Binding SelectedTrip, Mode=TwoWay}"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 HorizontalContentAlignment="Stretch"
+     
+                                 >
 
-                                <!-- Card 1 -->
-                                <Border Width="220"
-                        Margin="0,0,16,16"
-                        Background="#FAFBFF"
-                        CornerRadius="14"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1">
-                                    <StackPanel>
-                                        <Border Height="120"
-                                Background="#DCEBFA"
-                                CornerRadius="14,14,0,0">
-                                            <Grid>
-                                                <TextBlock Text="PARIS"
-                                           FontSize="26"
-                                           FontWeight="Bold"
-                                           Foreground="#1F3A5F"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
 
-                                        <StackPanel Margin="14">
-                                            <TextBlock Text="Paris Getaway"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"/>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,0,12,12"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="OuterBorder"
+                                        Background="Transparent"
+                                        CornerRadius="14">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="OuterBorder" Property="Background" Value="#EAF2FF"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
 
-                                            <TextBlock Text="Flight + Hotel | 5 Days"
-                                       FontSize="13"
-                                       Foreground="#6B7280"
-                                       Margin="0,6,0,10"/>
-
-                                            <Border Background="#DFF5E8"
-                                    CornerRadius="8"
-                                    Padding="8,4"
-                                    HorizontalAlignment="Left">
-                                                <TextBlock Text="Active"
-                                           Foreground="#198754"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"/>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="200"
+                            Background="#FAFBFF"
+                            CornerRadius="14"
+                            BorderBrush="#E5E7EB"
+                            BorderThickness="1">
+                                        <StackPanel>
+                                            <Border Height="95"
+                                    Background="#DCEBFA"
+                                    CornerRadius="14,14,0,0">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="16"
+                                               FontWeight="Bold"
+                                               Foreground="#1F3A5F"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Margin="10"/>
+                                                </Grid>
                                             </Border>
 
-                                            <TextBlock Text="€850"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"
-                                       Margin="0,14,0,12"/>
-
-                                            <Button Content="View Details"
-                                    Height="36"
-                                    Background="#2F80ED"
-                                    Foreground="White"
-                                    BorderBrush="Transparent"
-                                    FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Card 2 -->
-                                <Border Width="220"
-                        Margin="0,0,16,16"
-                        Background="#FAFBFF"
-                        CornerRadius="14"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1">
-                                    <StackPanel>
-                                        <Border Height="120"
-                                Background="#D9F3EE"
-                                CornerRadius="14,14,0,0">
-                                            <Grid>
-                                                <TextBlock Text="MALDIVES"
-                                           FontSize="24"
+                                            <StackPanel Margin="12">
+                                                <TextBlock Text="{Binding Name}"
+                                           FontSize="16"
                                            FontWeight="Bold"
-                                           Foreground="#167D74"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
+                                           Foreground="#1F2937"
+                                           TextWrapping="Wrap"/>
 
-                                        <StackPanel Margin="14">
-                                            <TextBlock Text="Tropical Escape"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"/>
-
-                                            <TextBlock Text="Beach Resort | 7 Days"
-                                       FontSize="13"
-                                       Foreground="#6B7280"
-                                       Margin="0,6,0,10"/>
-
-                                            <Border Background="#DFF5E8"
-                                    CornerRadius="8"
-                                    Padding="8,4"
-                                    HorizontalAlignment="Left">
-                                                <TextBlock Text="Active"
-                                           Foreground="#198754"
+                                                <TextBlock Margin="0,4,0,3"
                                            FontSize="12"
-                                           FontWeight="SemiBold"/>
-                                            </Border>
+                                           Foreground="#6B7280">
+                                    <Run Text="{Binding TransportName, Mode=OneWay}"/>
+                                    <Run Text=" + "/>
+                                    <Run Text="{Binding StayName, Mode=OneWay}"/>
+                                                </TextBlock>
 
-                                            <TextBlock Text="€1,200"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"
-                                       Margin="0,14,0,12"/>
+                                                <TextBlock Margin="0,0,0,8"
+                                           FontSize="12"
+                                           Foreground="#6B7280">
+                                    <Run Text="Days: "/>
+                                    <Run Text="{Binding DaysCount, Mode=OneWay}"/>
+                                                </TextBlock>
 
-                                            <Button Content="View Details"
-                                    Height="36"
-                                    Background="#2F80ED"
-                                    Foreground="White"
-                                    BorderBrush="Transparent"
-                                    FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
+                                                <Border Background="#E5EDFF"
+                                        CornerRadius="8"
+                                        Padding="6,3"
+                                        HorizontalAlignment="Left">
+                                                    <TextBlock Text="{Binding Season.Name, TargetNullValue=Trip}"
+                                               Foreground="#2F5BD1"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"/>
+                                                </Border>
 
-                                <!-- Card 3 -->
-                                <Border Width="220"
-                        Margin="0,0,16,16"
-                        Background="#FAFBFF"
-                        CornerRadius="14"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1">
-                                    <StackPanel>
-                                        <Border Height="120"
-                                Background="#E7EEF9"
-                                CornerRadius="14,14,0,0">
-                                            <Grid>
-                                                <TextBlock Text="ALPS"
-                                           FontSize="26"
+                                                <TextBlock Text="{Binding Price, StringFormat=€ {0:F2}}"
+                                           FontSize="18"
                                            FontWeight="Bold"
-                                           Foreground="#355C8A"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
+                                           Foreground="#1F2937"
+                                           Margin="0,14,0,12"/>
 
-                                        <StackPanel Margin="14">
-                                            <TextBlock Text="Alpine Adventure"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"/>
-
-                                            <TextBlock Text="Hiking Tour | 6 Days"
-                                       FontSize="13"
-                                       Foreground="#6B7280"
-                                       Margin="0,6,0,10"/>
-
-                                            <Border Background="#FFF4D6"
-                                    CornerRadius="8"
-                                    Padding="8,4"
-                                    HorizontalAlignment="Left">
-                                                <TextBlock Text="Seasonal"
-                                           Foreground="#B7791F"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"/>
-                                            </Border>
-
-                                            <TextBlock Text="€950"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"
-                                       Margin="0,14,0,12"/>
-
-                                            <Button Content="View Details"
-                                    Height="36"
-                                    Background="#2F80ED"
-                                    Foreground="White"
-                                    BorderBrush="Transparent"
-                                    FontWeight="SemiBold"/>
+                                                <Button Content="View Details"
+                                        Height="32"
+                                        Background="#2F80ED"
+                                        Foreground="White"
+                                        BorderBrush="Transparent"
+                                        FontWeight="SemiBold"
+                                        IsHitTestVisible="False"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Card 4 -->
-                                <Border Width="220"
-                        Margin="0,0,16,16"
-                        Background="#FAFBFF"
-                        CornerRadius="14"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1">
-                                    <StackPanel>
-                                        <Border Height="120"
-                                Background="#FDE7D9"
-                                CornerRadius="14,14,0,0">
-                                            <Grid>
-                                                <TextBlock Text="JAPAN"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="#A44A1D"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
-
-                                        <StackPanel Margin="14">
-                                            <TextBlock Text="Cultural Japan"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"/>
-
-                                            <TextBlock Text="Guided Tour | 8 Days"
-                                       FontSize="13"
-                                       Foreground="#6B7280"
-                                       Margin="0,6,0,10"/>
-
-                                            <Border Background="#E5EDFF"
-                                    CornerRadius="8"
-                                    Padding="8,4"
-                                    HorizontalAlignment="Left">
-                                                <TextBlock Text="Featured"
-                                           Foreground="#2F5BD1"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"/>
-                                            </Border>
-
-                                            <TextBlock Text="€1,750"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"
-                                       Margin="0,14,0,12"/>
-
-                                            <Button Content="View Details"
-                                    Height="36"
-                                    Background="#2F80ED"
-                                    Foreground="White"
-                                    BorderBrush="Transparent"
-                                    FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                            </WrapPanel>
-                        </ScrollViewer>
-                    </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Grid.Row="1"
+                   Text="No packages found"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Foreground="#9CA3AF"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TripsView.IsEmpty}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
                 </Border>
                 <!-- Right section -->
                 <Border Grid.Column="2"
@@ -439,13 +373,55 @@
         Padding="20">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock Text="Selected Package Preview"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       Foreground="#1F2937"
-                       Margin="0,0,0,16"/>
+                            <Border Background="#F8FAFC"
+        BorderBrush="#E5E7EB"
+        BorderThickness="1"
+        CornerRadius="14"
+        Padding="24"
+        Margin="0,0,0,16">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedTrip}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
 
-                            <!-- Top banner -->
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="No package selected"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   Foreground="#1F2937"
+                   HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Select a package from the list to see its details here."
+                   FontSize="14"
+                   Foreground="#6B7280"
+                   Margin="0,8,0,0"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Width="250"/>
+                                </StackPanel>
+                            </Border>
+
+
+                            <!-- AICI pui TOT ce aveai deja in dreapta -->
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedTrip}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+
+                                <!-- Top banner -->
                             <Border Height="170"
                     Background="#DCEBFA"
                     CornerRadius="14"
@@ -483,7 +459,7 @@
                                     <TextBlock Text="Price"
                                FontSize="14"
                                Foreground="#6B7280"/>
-                                    <TextBlock Text="{Binding SelectedTrip.Price, StringFormat={}{0:F2}, TargetNullValue=-}"
+                                    <TextBlock Text="{Binding SelectedTrip.Price, StringFormat=€ {0:F2}, TargetNullValue=-}"
                                FontSize="30"
                                FontWeight="Bold"
                                Foreground="#1F2937"
@@ -507,12 +483,12 @@
 
                                     <TextBlock Margin="0,0,0,8">
                         <Run Text="Transport: "/>
-                        <Run Text="{Binding SelectedTrip.TransportName, TargetNullValue=N/A}"/>
+                        <Run Text="{Binding SelectedTrip.TransportName, Mode=OneWay, TargetNullValue=N/A}"/>
                                     </TextBlock>
 
                                     <TextBlock Margin="0,0,0,8">
                         <Run Text="Stay: "/>
-                        <Run Text="{Binding SelectedTrip.StayName, TargetNullValue=N/A}"/>
+                        <Run Text="{Binding SelectedTrip.StayName, Mode=OneWay, TargetNullValue=N/A}"/>
                                     </TextBlock>
 
                                     <TextBlock Margin="0,0,0,8">
@@ -532,7 +508,7 @@
 
                                     <TextBlock>
                         <Run Text="Days Count: "/>
-                        <Run Text="{Binding SelectedTrip.Days.Count, TargetNullValue=0}"/>
+                        <Run Text="{Binding SelectedTrip.DaysCount, Mode=OneWay, TargetNullValue=0}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </Border>
@@ -586,6 +562,44 @@
                                     </TextBlock>
                                 </StackPanel>
                             </Border>
+
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+            Content="Edit"
+            Height="40"
+            Background="#F3F4F6"
+            Foreground="#1F2937"
+            BorderBrush="#D1D5DB"
+            FontWeight="SemiBold"
+            Click="EditPackage_Click"/>
+
+                                <Button Grid.Column="2"
+            Content="Clone"
+            Height="40"
+            Background="#2F80ED"
+            Foreground="White"
+            BorderBrush="Transparent"
+            FontWeight="SemiBold"
+            Command="{Binding CloneCommand}"/>
+
+                                <Button Grid.Column="4"
+            Content="Delete"
+            Height="40"
+            Background="#E74C3C"
+            Foreground="White"
+            BorderBrush="Transparent"
+            FontWeight="SemiBold"
+            Command="{Binding DeleteCommand}"/>
+                            </Grid>
+                        </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

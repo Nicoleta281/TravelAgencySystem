@@ -35,7 +35,7 @@ namespace TravelAgency.Core.Data.Repositories
 
         }
 
-        public  void Update (TripPackage trip)
+        public void Update(TripPackage trip)
         {
             using var db = TravelAgencyDbContextFactory.Create();
 
@@ -44,18 +44,18 @@ namespace TravelAgency.Core.Data.Repositories
             if (entity == null)
                 return;
 
-            var mapped =TripPackageMapper.ToEntity(trip);
+            var mapped = TripPackageMapper.ToEntity(trip);
 
             entity.Name = mapped.Name;
             entity.Price = mapped.Price;
             entity.SeasonName = mapped.SeasonName;
             entity.SeasonStartDate = mapped.SeasonStartDate;
             entity.SeasonEndDate = mapped.SeasonEndDate;
-            entity.TransportType= mapped.TransportType;
+            entity.TransportType = mapped.TransportType;
+            entity.StayType = mapped.StayType;
             entity.ExtraServices = mapped.ExtraServices;
 
-            db.SaveChanges ();
+            db.SaveChanges();
         }
-
     }
 }

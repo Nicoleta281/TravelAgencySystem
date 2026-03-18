@@ -50,9 +50,8 @@ namespace TravelAgency.Core.Builders
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            // Aici vom lega mai tarziu Factory Method / Abstract Factory
-            // deocamdata lasam Transport si Stay necompletate
-            // ca sa pastram Builder-ul functional fara sa incurcam celelalte patternuri
+            _tripPackage.TransportDisplayName = request.TransportType ?? "";
+            _tripPackage.StayDisplayName = request.AccommodationType ?? "";
         }
 
         public void BuildPricing(TripRequest request)

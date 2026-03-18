@@ -27,8 +27,12 @@ namespace TravelAgency.Core.Data.Mappers
                 SeasonStartDate = DateTime.SpecifyKind(season.StartDate, DateTimeKind.Utc),
                 SeasonEndDate = DateTime.SpecifyKind(season.EndDate, DateTimeKind.Utc),
 
-                TransportType = trip.Transport?.GetType().Name ?? "",
-                StayType = trip.Stay?.GetType().Name ?? "",
+                TransportType = trip.Transport?.GetType().Name
+                ?? trip.TransportDisplayName
+                ?? "",
+                StayType = trip.Stay?.GetType().Name
+           ?? trip.StayDisplayName
+           ?? "",
                 ExtraServices = string.Join(",", trip.ExtraServices.Select(x => x.GetType().Name))
             };
         }
@@ -36,9 +40,12 @@ namespace TravelAgency.Core.Data.Mappers
         public static TripPackage FromEntity(TripPackageEntity e)
         {
             return new TripPackage
-            {   Id = e.Id,
+            {
+                Id = e.Id,
                 Name = e.Name,
                 Price = e.Price,
+                TransportDisplayName = e.TransportType ?? "",
+                StayDisplayName = e.StayType ?? "",
                 Season = new Season
                 {
                     Name = e.SeasonName,

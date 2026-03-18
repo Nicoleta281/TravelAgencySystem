@@ -7,6 +7,7 @@ namespace TravelAgency.WPF.Views
         public AgentWindow()
         {
             InitializeComponent();
+            DataContext = new TravelAgency.WPF.ViewModels.AgentViewModel();
         }
 
         private void CreatePackage_Click(object sender, RoutedEventArgs e)
@@ -15,6 +16,20 @@ namespace TravelAgency.WPF.Views
             var result = window.ShowDialog();
 
             if (result == true && DataContext is TravelAgency.WPF.ViewModels.AgentViewModel vm)
+            {
+                vm.ReloadCommand.Execute(null);
+            }
+        }
+
+        private void EditPackage_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not TravelAgency.WPF.ViewModels.AgentViewModel vm || vm.SelectedTrip == null)
+                return;
+
+            var window = new CreatePackageWindow(vm.SelectedTrip);
+            var result = window.ShowDialog();
+
+            if (result == true)
             {
                 vm.ReloadCommand.Execute(null);
             }

@@ -9,7 +9,6 @@ namespace TravelAgency.Core.Models.TripPkg.Package
     public class TripPackage : IPrototype<TripPackage>
     {
         public int Id { get; set; }
-
         public string Name { get; set; } = "";
         public double Price { get; set; }
         public Season? Season { get; set; }
@@ -20,12 +19,39 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public IStay? Stay { get; set; }
         public List<IExtraService> ExtraServices { get; set; } = new();
 
-        // ===== Helpers pentru UI =====
-        public string TransportName => Transport?.GetType().Name ?? "N/A";
-        public string StayName => Stay?.GetType().Name ?? "N/A";
+        public string TransportDisplayName { get; set; } = "";
+        public string StayDisplayName { get; set; } = "";
+
+        public int DaysCount
+        {
+            get
+            {
+                if (Season == null)
+                    return 0;
+
+                return (Season.EndDate.Date - Season.StartDate.Date).Days + 1;
+            }
+        }
+
+        public string TransportName =>
+            Transport != null
+                ? Transport.GetType().Name
+                : !string.IsNullOrWhiteSpace(TransportDisplayName)
+                    ? TransportDisplayName
+                    : "N/A";
+
+        public string StayName =>
+            Stay != null
+                ? Stay.GetType().Name
+                : !string.IsNullOrWhiteSpace(StayDisplayName)
+                    ? StayDisplayName
+                    : "N/A";
 
         public IEnumerable<string> ExtraServiceNames =>
             ExtraServices?.Select(x => x.GetType().Name) ?? Enumerable.Empty<string>();
+
+
+        // ===== Helpers pentru UI =====
 
         public void AddDay(TripDay day)
         {

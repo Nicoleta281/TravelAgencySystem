@@ -5,13 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows;
+
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Models.TripPkg.Package;
 
 namespace TravelAgency.WPF.Views
 {
@@ -19,12 +20,21 @@ namespace TravelAgency.WPF.Views
     {
         private readonly TripCreationService _tripCreationService = new();
         private readonly ITripPackageRepository _repo = new EfTripPackageRepository();
-
+        private readonly TripPackage? _editingTrip;
         private int currentStep = 1;
 
-        public CreatePackageWindow()
+        public CreatePackageWindow(TripPackage? tripToEdit = null)
         {
             InitializeComponent();
+
+            _editingTrip = tripToEdit;
+
+            if (_editingTrip != null)
+            {
+                Title = "Edit Package";
+                LoadTripIntoForm();
+            }
+
             UpdateWizardUI();
             UpdateLeftPreview();
         }
@@ -61,11 +71,12 @@ namespace TravelAgency.WPF.Views
             if (endDate.Value < startDate.Value)
                 throw new InvalidOperationException("End Date must be after Start Date.");
 
-            int numberOfDays;
-            if (string.IsNullOrWhiteSpace(NumberOfDaysTextBox.Text))
+            int numberOfDays = 0;
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
                 numberOfDays = (endDate.Value - startDate.Value).Days;
-            else
-                numberOfDays = ParseInt(NumberOfDaysTextBox.Text, "Number of Days");
+            }
 
             string transportType = GetComboBoxText(TransportTypeComboBox);
             string departureCity = DepartureCityTextBox.Text.Trim();
@@ -130,13 +141,27 @@ namespace TravelAgency.WPF.Views
                     var request = BuildTripRequestFromForm();
                     var trip = _tripCreationService.CreateTrip(request);
 
-                    _repo.Add(trip);
+                    if (_editingTrip != null)
+                    {
+                        trip.Id = _editingTrip.Id;
+                        _repo.Update(trip);
 
-                    MessageBox.Show(
-                        $"Package created successfully!\n\nName: {trip.Name}\nPrice: {trip.Price:F2}",
-                        "Success",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                        MessageBox.Show(
+                            $"Package updated successfully!\n\nName: {trip.Name}\nPrice: {trip.Price:F2}",
+                            "Success",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        _repo.Add(trip);
+
+                        MessageBox.Show(
+                            $"Package created successfully!\n\nName: {trip.Name}\nPrice: {trip.Price:F2}",
+                            "Success",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
 
                     DialogResult = true;
                     Close();
@@ -378,5 +403,156 @@ namespace TravelAgency.WPF.Views
             PreviewTransportStayText.Text = $"{transport} + {accommodation}";
             PreviewPriceText.Text = $"{finalPrice:F2}";
         }
+
+        private void LoadTripIntoForm()
+        {
+            if (_editingTrip == null)
+                return;
+
+            PackageNameTextBox.Text = _editingTrip.Name;
+
+            SetComboBoxByText(TripTypeComboBox, InferTripTypeFromName(_editingTrip.Name));
+            SetComboBoxByText(CategoryComboBox, InferCategoryFromName(_editingTrip.Name));
+
+            ShortDescriptionTextBox.Text = "";
+
+            DestinationTextBox.Text = _editingTrip.Season?.Name ?? _editingTrip.Name;
+            CountryTextBox.Text = "Unknown";
+
+            StartDatePicker.SelectedDate = _editingTrip.Season?.StartDate;
+            EndDatePicker.SelectedDate = _editingTrip.Season?.EndDate;
+
+            if (_editingTrip.Days != null && _editingTrip.Days.Count > 0)
+            {
+                NumberOfDaysTextBox.Text = _editingTrip.Days.Count.ToString();
+            }
+            else if (_editingTrip.Season != null)
+            {
+                NumberOfDaysTextBox.Text =
+                    (_editingTrip.Season.EndDate - _editingTrip.Season.StartDate).Days.ToString();
+            }
+
+            SetComboBoxByText(TransportTypeComboBox, NormalizeTransportName(_editingTrip.TransportName));
+            DepartureCityTextBox.Text = "";
+
+            SetComboBoxByText(AccommodationTypeComboBox, NormalizeStayName(_editingTrip.StayName));
+            AccommodationNameTextBox.Text = _editingTrip.StayName == "N/A" ? "" : _editingTrip.StayName;
+
+            bool hasBreakfast = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Breakfast"));
+            SetComboBoxByText(MealPlanComboBox, hasBreakfast ? "Breakfast" : "Half Board");
+
+            AvailableSeatsTextBox.Text = "0";
+
+            AirportTransferCheckBox.IsChecked = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Transfer"));
+            TravelInsuranceCheckBox.IsChecked = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Insurance"));
+            TourGuideCheckBox.IsChecked = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Guide"));
+            FreeCancellationCheckBox.IsChecked = false;
+
+            BasePriceTextBox.Text = _editingTrip.Price.ToString("F2");
+            DiscountTextBox.Text = "0";
+            VatTextBox.Text = "0";
+            ExtraChargesTextBox.Text = "0";
+        }
+
+        private static void SetComboBoxByText(ComboBox comboBox, string text)
+        {
+            foreach (var item in comboBox.Items)
+            {
+                if (item is ComboBoxItem comboBoxItem &&
+                    string.Equals(comboBoxItem.Content?.ToString(), text, StringComparison.OrdinalIgnoreCase))
+                {
+                    comboBox.SelectedItem = comboBoxItem;
+                    return;
+                }
+            }
+        }
+
+        private static string InferCategoryFromName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "Standard";
+
+            if (name.Contains("Premium", StringComparison.OrdinalIgnoreCase))
+                return "Premium";
+
+            if (name.Contains("Luxury", StringComparison.OrdinalIgnoreCase))
+                return "Luxury";
+
+            return "Standard";
+        }
+
+        private static string InferTripTypeFromName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "City Break";
+
+            if (name.Contains("Beach", StringComparison.OrdinalIgnoreCase))
+                return "Beach Holiday";
+
+            if (name.Contains("Adventure", StringComparison.OrdinalIgnoreCase))
+                return "Adventure";
+
+            if (name.Contains("Cultural", StringComparison.OrdinalIgnoreCase))
+                return "Cultural Tour";
+
+            return "City Break";
+        }
+
+        private static string NormalizeTransportName(string transportName)
+        {
+            if (transportName.Contains("Plane", StringComparison.OrdinalIgnoreCase) ||
+                transportName.Contains("Flight", StringComparison.OrdinalIgnoreCase))
+                return "Flight";
+
+            if (transportName.Contains("Bus", StringComparison.OrdinalIgnoreCase))
+                return "Bus";
+
+            if (transportName.Contains("Train", StringComparison.OrdinalIgnoreCase))
+                return "Train";
+
+            return "Own Transport";
+        }
+
+        private static string NormalizeStayName(string stayName)
+        {
+            if (stayName.Contains("Hotel", StringComparison.OrdinalIgnoreCase))
+                return "Hotel";
+
+            if (stayName.Contains("Resort", StringComparison.OrdinalIgnoreCase))
+                return "Resort";
+
+            if (stayName.Contains("Apartment", StringComparison.OrdinalIgnoreCase))
+                return "Apartment";
+
+            if (stayName.Contains("Villa", StringComparison.OrdinalIgnoreCase))
+                return "Villa";
+
+            return "Hotel";
+        }
+
+        private void DatesChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateNumberOfDays();
+        }
+
+        private void UpdateNumberOfDays()
+        {
+            if (StartDatePicker.SelectedDate.HasValue &&
+                EndDatePicker.SelectedDate.HasValue &&
+                EndDatePicker.SelectedDate.Value >= StartDatePicker.SelectedDate.Value)
+            {
+                int days = (EndDatePicker.SelectedDate.Value - StartDatePicker.SelectedDate.Value).Days + 1;
+                NumberOfDaysTextBox.Text = days.ToString();
+            }
+            else
+            {
+                NumberOfDaysTextBox.Text = "";
+            }
+
+            UpdateLeftPreview();
+            if (currentStep == 5)
+                UpdateReviewPanel();
+        }
+
     }
 }

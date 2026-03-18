@@ -1,6 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
@@ -8,7 +12,6 @@ using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
-using System.Linq;
 
 namespace TravelAgency.WPF.ViewModels
 {
@@ -19,7 +22,18 @@ namespace TravelAgency.WPF.ViewModels
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
 
-   
+        public ICollectionView TripsView { get; }
+        public int TotalPackagesCount => Trips.Count;
+
+        public int ActiveOffersCount => Trips.Count;
+
+        public string AveragePriceText =>
+            Trips.Count == 0 ? "0.00" : Trips.Average(t => t.Price).ToString("F2");
+
+        public string TotalValueText =>
+            Trips.Sum(t => t.Price).ToString("F2");
+
+
         private TripPackage? _selectedTrip;
         public TripPackage? SelectedTrip
         {
@@ -96,6 +110,9 @@ namespace TravelAgency.WPF.ViewModels
             _repo = repo;
             _tripCreationService = tripCreationService;
 
+            TripsView = CollectionViewSource.GetDefaultView(Trips);
+            TripsView.Filter = FilterTrips;
+
             CreateQuickCommand = new RelayCommand(CreateQuick);
             CreateCustomCommand = new RelayCommand(CreateCustom);
             CloneCommand = new RelayCommand(CloneSelected, () => SelectedTrip != null);
@@ -103,6 +120,7 @@ namespace TravelAgency.WPF.ViewModels
             UpdateCommand = new RelayCommand(UpdateSelected, () => SelectedTrip != null);
             DeleteCommand = new RelayCommand(DeleteSelected, () => SelectedTrip != null);
 
+            Trips.CollectionChanged += (_, __) => RefreshStats();
             using (var db = TravelAgencyDbContextFactory.Create())
                 db.Database.Migrate();
 
@@ -116,9 +134,11 @@ namespace TravelAgency.WPF.ViewModels
             foreach (var t in _repo.GetAll())
                 Trips.Add(t);
 
+            
             if (Trips.Count > 0 && SelectedTrip == null)
                 SelectedTrip = Trips[0];
-
+            RefreshStats();
+            TripsView.Refresh();
             Status = $"Loaded {Trips.Count} trips from database.";
         }
 
@@ -226,6 +246,8 @@ namespace TravelAgency.WPF.ViewModels
                     return;
 
                 var clone = SelectedTrip.DeepClone();
+
+                clone.Id = 0;
                 clone.Name = SelectedTrip.Name + " (Clone)";
 
                 _repo.Add(clone);
@@ -237,6 +259,7 @@ namespace TravelAgency.WPF.ViewModels
             catch (Exception ex)
             {
                 Status = $"Error: {ex.Message}";
+                MessageBox.Show(ex.Message, "Clone Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -247,11 +270,13 @@ namespace TravelAgency.WPF.ViewModels
                 if (SelectedTrip == null)
                     return;
 
-                var id = SelectedTrip.Id;
+                var tripToDelete = SelectedTrip;
+                var id = tripToDelete.Id;
 
                 _repo.Delete(id);
-                Trips.Remove(SelectedTrip);
-                SelectedTrip = null;
+                Trips.Remove(tripToDelete);
+
+                SelectedTrip = Trips.Count > 0 ? Trips[0] : null;
 
                 Status = "Trip deleted successfully.";
             }
@@ -305,6 +330,44 @@ namespace TravelAgency.WPF.ViewModels
             {
                 Status = $"Error: {ex.Message}";
             }
+        }
+
+        private void RefreshStats()
+        {
+            OnPropertyChanged(nameof(TotalPackagesCount));
+            OnPropertyChanged(nameof(ActiveOffersCount));
+            OnPropertyChanged(nameof(AveragePriceText));
+            OnPropertyChanged(nameof(TotalValueText));
+        }
+
+        private string _searchText = "";
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (Set(ref _searchText, value))
+                {
+                    TripsView.Refresh();
+                }
+            }
+        }
+
+        private bool FilterTrips(object obj)
+        {
+            if (obj is not TripPackage trip)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(SearchText))
+                return true;
+
+            string search = SearchText.Trim().ToLower();
+
+            return
+                (!string.IsNullOrWhiteSpace(trip.Name) && trip.Name.ToLower().Contains(search)) ||
+                (!string.IsNullOrWhiteSpace(trip.TransportName) && trip.TransportName.ToLower().Contains(search)) ||
+                (!string.IsNullOrWhiteSpace(trip.StayName) && trip.StayName.ToLower().Contains(search)) ||
+                (trip.Season != null && !string.IsNullOrWhiteSpace(trip.Season.Name) && trip.Season.Name.ToLower().Contains(search));
         }
     }
 }

@@ -33,6 +33,9 @@ namespace TravelAgency.Core.Services
             // Componentele create prin Factory
             trip.Transport = transport;
             trip.Stay = stay;
+            trip.TransportDisplayName = request.TransportType;
+            trip.StayDisplayName = request.AccommodationType;
+            
 
             if (extraService != null)
                 trip.AddExtraService(extraService);
