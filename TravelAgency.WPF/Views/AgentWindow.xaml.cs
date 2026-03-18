@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using TravelAgency.WPF.ViewModels;
 
 namespace TravelAgency.WPF.Views
 {
@@ -8,7 +7,17 @@ namespace TravelAgency.WPF.Views
         public AgentWindow()
         {
             InitializeComponent();
-            DataContext = new AgentViewModel();
+        }
+
+        private void CreatePackage_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CreatePackageWindow();
+            var result = window.ShowDialog();
+
+            if (result == true && DataContext is TravelAgency.WPF.ViewModels.AgentViewModel vm)
+            {
+                vm.ReloadCommand.Execute(null);
+            }
         }
     }
 }

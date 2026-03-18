@@ -116,6 +116,9 @@ namespace TravelAgency.WPF.ViewModels
             foreach (var t in _repo.GetAll())
                 Trips.Add(t);
 
+            if (Trips.Count > 0 && SelectedTrip == null)
+                SelectedTrip = Trips[0];
+
             Status = $"Loaded {Trips.Count} trips from database.";
         }
 
@@ -135,10 +138,12 @@ namespace TravelAgency.WPF.ViewModels
 
                 var request = new TripRequest
                 {
-                    Name = name,
-                    Price = price,
+                    PackageName = name,
                     TripType = tripType,
-                    TransportType = transportType
+                    Category = tripType,
+                    TransportType = transportType,
+                    BasePrice = price,
+                    FinalPrice = price
                 };
 
                 var trip = _tripCreationService.CreateTrip(request);
@@ -154,7 +159,6 @@ namespace TravelAgency.WPF.ViewModels
                 Status = $"Error: {ex.Message}";
             }
         }
-
         private void CreateCustom()
         {
             try
@@ -169,20 +173,38 @@ namespace TravelAgency.WPF.ViewModels
                 if (!double.TryParse(PriceText, out var price))
                     price = 1200;
 
-                var trip = new TravelAgency.Core.Builders.TripPackageBuilder()
-                    .WithName(string.IsNullOrWhiteSpace(Name) ? "Builder Trip" : Name.Trim())
-                    .WithPrice(price)
-                    .WithSeason(season)
-                    .WithTransport(new TravelAgency.Core.Models.TripPkg.Transport.Plane())
-                    .WithStay(new TravelAgency.Core.Models.TripPkg.Stay.Hotel
-                    {
-                        Name = "Hotel Roma",
-                        Address = "Center"
-                    })
-                    .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Guide())
-                    .WithExtra(new TravelAgency.Core.Models.TripPkg.Services.Breakfast())
-                    .WithDay(new TripDay())
-                    .Build();
+                var request = new TripRequest
+                {
+                    PackageName = string.IsNullOrWhiteSpace(Name) ? "Builder Trip" : Name.Trim(),
+                    TripType = string.IsNullOrWhiteSpace(TripType) ? "Premium" : TripType,
+                    Category = string.IsNullOrWhiteSpace(TripType) ? "Premium" : TripType,
+                    ShortDescription = "Created with Builder",
+                    Destination = "Rome",
+                    Country = "Italy",
+                    StartDate = season.StartDate,
+                    EndDate = season.EndDate,
+                    NumberOfDays = (season.EndDate - season.StartDate).Days,
+                    TransportType = string.IsNullOrWhiteSpace(TransportType) ? "Plane" : TransportType,
+                    DepartureCity = "Chisinau",
+                    AccommodationType = "Hotel",
+                    AccommodationName = "Hotel Roma",
+                    MealPlan = "Breakfast",
+                    AvailableSeats = 10,
+                    AirportTransfer = true,
+                    TravelInsurance = true,
+                    TourGuide = true,
+                    FreeCancellation = false,
+                    BasePrice = price,
+                    DiscountPercent = 0,
+                    VatPercent = 0,
+                    ExtraCharges = 0,
+                    FinalPrice = price
+                };
+
+                var builder = new TravelAgency.Core.Builders.TripPackageBuilder();
+                var director = new TravelAgency.Core.Builders.TripDirector(builder);
+
+                var trip = director.Make(request);
 
                 _repo.Add(trip);
                 Trips.Add(trip);
@@ -261,10 +283,12 @@ namespace TravelAgency.WPF.ViewModels
 
                 var request = new TripRequest
                 {
-                    Name = name,
-                    Price = price,
+                    PackageName = name,
                     TripType = tripType,
-                    TransportType = transportType
+                    Category = tripType,
+                    TransportType = transportType,
+                    BasePrice = price,
+                    FinalPrice = price
                 };
 
                 var updatedTrip = _tripCreationService.CreateTrip(request);

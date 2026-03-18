@@ -1,4 +1,4 @@
-﻿using TravelAgency.Core.Interfaces;
+﻿using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 
 namespace TravelAgency.Core.Builders
@@ -7,15 +7,11 @@ namespace TravelAgency.Core.Builders
     {
         void Reset();
 
-        void SetName(string name);
-        void SetPrice(double price);
-        void SetSeason(Season season);
-        void SetTransport(ITransport transport);
-        void SetStay(IStay stay);
+        void BuildBasicInfo(TripRequest request);
+        void BuildDestinationAndDates(TripRequest request);
+        void BuildTransportAndAccommodation(TripRequest request);
+        void BuildPricing(TripRequest request);
 
-        void AddDay(TripDay day);
-        void AddExtraService(IExtraService service);
-
-        TripPackage Build();
+        TripPackage GetResult();
     }
 }

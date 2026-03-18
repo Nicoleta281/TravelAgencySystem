@@ -1,30 +1,35 @@
-﻿using TravelAgency.Core.Interfaces;
+﻿using System;
+using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 
 namespace TravelAgency.Core.Builders
 {
     public class TripDirector
     {
-        public TripPackage BuildCityBreak(
-            ITripPackageBuilder builder,
-            ITransport transport,
-            IStay stay,
-            Season season)
+        private ITripPackageBuilder _builder;
+
+        public TripDirector(ITripPackageBuilder builder)
         {
-            builder.Reset();
+            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+        }
 
-            builder.SetName("City Break");
-            builder.SetPrice(200);
-            builder.SetSeason(season);
+        public void ChangeBuilder(ITripPackageBuilder builder)
+        {
+            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+        }
 
-            builder.SetTransport(transport);
-            builder.SetStay(stay);
+        public TripPackage Make(TripRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
-            builder.AddDay(new TripDay());
-            builder.AddDay(new TripDay());
+            _builder.Reset();
+            _builder.BuildBasicInfo(request);
+            _builder.BuildDestinationAndDates(request);
+            _builder.BuildTransportAndAccommodation(request);
+            _builder.BuildPricing(request);
 
-            return builder.Build();
+            return _builder.GetResult();
         }
     }
 }
-
