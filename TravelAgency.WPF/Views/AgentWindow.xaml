@@ -364,6 +364,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
+                        <Button Content="Test Hotel Search" Click="TestHotelSearch_Click" />
                     </Grid>
                 </Border>
                 <!-- Right section -->
