@@ -1,6 +1,9 @@
-﻿using System.Windows;
+using System;
+using System.Linq;
+using System.Windows;
 using TravelAgency.Core.Adapters.SerpApi;
 using TravelAgency.Core.Services;
+using TravelAgency.Core.Models.Locations;
 
 namespace TravelAgency.WPF.Views
 {
@@ -42,6 +45,15 @@ namespace TravelAgency.WPF.Views
             try
             {
                 var key = Environment.GetEnvironmentVariable("SERPAPI_API_KEY")?.Trim();
+                if (string.IsNullOrWhiteSpace(key))
+                    key = Environment.GetEnvironmentVariable(
+                        "SERPAPI_API_KEY",
+                        EnvironmentVariableTarget.User)?.Trim();
+
+                if (string.IsNullOrWhiteSpace(key))
+                    key = Environment.GetEnvironmentVariable(
+                        "SERPAPI_API_KEY",
+                        EnvironmentVariableTarget.Machine)?.Trim();
 
                 if (string.IsNullOrWhiteSpace(key))
                 {
@@ -61,7 +73,31 @@ namespace TravelAgency.WPF.Views
                     2
                 );
 
-                MessageBox.Show($"Found {hotels.Count} hotels.");
+                if (hotels.Count == 0)
+                {
+                    MessageBox.Show("No hotels returned by API.", "Hotel Search",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var previewCount = Math.Min(10, hotels.Count);
+
+                string FormatHotelLine(int index, HotelSearchOption h)
+                {
+                    var price =
+                        h.PricePerNight.HasValue ? $"{h.PricePerNight.Value:F2} /night" : "N/A";
+                    var classText = h.HotelClass.HasValue ? $" | Class: {h.HotelClass.Value}" : "";
+                    return $"{index}. {h.Name} | {price}{classText}";
+                }
+
+                var preview = string.Join(Environment.NewLine,
+                    hotels.Take(previewCount).Select((h, i) => FormatHotelLine(i + 1, h)));
+
+                MessageBox.Show(
+                    $"Found {hotels.Count} hotels. Showing top {previewCount}:{Environment.NewLine}{preview}",
+                    "Hotel Search",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {

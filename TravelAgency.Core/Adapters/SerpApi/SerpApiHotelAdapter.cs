@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Net.Http;
@@ -19,11 +19,21 @@ namespace TravelAgency.Core.Adapters.SerpApi
 
         public SerpApiHotelAdapter()
         {
+            // Some runs (e.g. launching from an IDE/debugger) may not inherit updated
+            // Windows environment variables into the current process.
             _apiKey = Environment.GetEnvironmentVariable("SERPAPI_API_KEY");
+            if (string.IsNullOrWhiteSpace(_apiKey))
+                _apiKey = Environment.GetEnvironmentVariable(
+                    "SERPAPI_API_KEY",
+                    EnvironmentVariableTarget.User);
 
             if (string.IsNullOrWhiteSpace(_apiKey))
-                throw new InvalidOperationException(
-                    "Missing environment variable: SERPAPI_API_KEY");
+                _apiKey = Environment.GetEnvironmentVariable(
+                    "SERPAPI_API_KEY",
+                    EnvironmentVariableTarget.Machine);
+
+            if (string.IsNullOrWhiteSpace(_apiKey))
+                throw new InvalidOperationException("Missing environment variable: SERPAPI_API_KEY");
 
             _baseUrl = ConfigurationManager.AppSettings["SerpApi.BaseUrl"]
                 ?? "https://serpapi.com/search.json";
