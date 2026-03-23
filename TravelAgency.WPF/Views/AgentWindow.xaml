@@ -364,7 +364,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <Button Content="Test Hotel Search" Click="TestHotelSearch_Click" />
+              
                     </Grid>
                 </Border>
                 <!-- Right section -->
@@ -408,7 +408,6 @@
                             </Border>
 
 
-                            <!-- AICI pui TOT ce aveai deja in dreapta -->
                             <StackPanel>
                                 <StackPanel.Style>
                                     <Style TargetType="StackPanel">

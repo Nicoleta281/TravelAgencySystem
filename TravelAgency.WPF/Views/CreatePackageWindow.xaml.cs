@@ -5,27 +5,46 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using TravelAgency.Core.Models;
-using TravelAgency.Core.Services;
+using TravelAgency.Core.Adapters.GeoDb;
+using TravelAgency.Core.Adapters.SerpApi;
 using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Interfaces;
+using TravelAgency.Core.Models;
+using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
-
+using TravelAgency.Core.Services;
+using System.Threading;
+using System.Windows.Input;
 namespace TravelAgency.WPF.Views
 {
     public partial class CreatePackageWindow : Window
     {
+
+
+
+
+
         private readonly TripCreationService _tripCreationService = new();
         private readonly ITripPackageRepository _repo = new EfTripPackageRepository();
         private readonly TripPackage? _editingTrip;
+        private readonly IHotelSearchProvider _hotelSearchProvider = new SerpApiHotelAdapter();
+        private List<HotelSearchOption> _hotelResults = new();
+        private readonly ILocationSearchProvider _locationSearchProvider = new GeoDbLocationAdapter();
+        private List<LocationOption> _locationResults = new();
+        private bool _isUpdatingDestinationSuggestions;
+        private CancellationTokenSource? _locationSearchCts;
         private int currentStep = 1;
 
         public CreatePackageWindow(TripPackage? tripToEdit = null)
         {
             InitializeComponent();
+            BasePriceTextBox.TextChanged += (s, e) => RecalculatePrice();
+            DiscountTextBox.TextChanged += (s, e) => RecalculatePrice();
+            VatTextBox.TextChanged += (s, e) => RecalculatePrice();
+            ExtraChargesTextBox.TextChanged += (s, e) => RecalculatePrice();
 
             _editingTrip = tripToEdit;
 
@@ -44,8 +63,8 @@ namespace TravelAgency.WPF.Views
             string tripType = GetComboBoxText(TripTypeComboBox);
             string category = GetComboBoxText(CategoryComboBox);
             string shortDescription = ShortDescriptionTextBox.Text.Trim();
-
-            string destination = DestinationTextBox.Text.Trim();
+            string destination = DestinationComboBox.Text.Trim(); 
+            
             string country = CountryTextBox.Text.Trim();
             DateTime? startDate = StartDatePicker.SelectedDate;
             DateTime? endDate = EndDatePicker.SelectedDate;
@@ -75,7 +94,7 @@ namespace TravelAgency.WPF.Views
 
             if (startDate.HasValue && endDate.HasValue)
             {
-                numberOfDays = (endDate.Value - startDate.Value).Days;
+                numberOfDays = (endDate.Value - startDate.Value).Days + 1;
             }
 
             string transportType = GetComboBoxText(TransportTypeComboBox);
@@ -299,7 +318,7 @@ namespace TravelAgency.WPF.Views
             ReviewCategoryText.Text = GetSafeText(GetComboBoxText(CategoryComboBox));
             ReviewDescriptionText.Text = GetSafeText(ShortDescriptionTextBox.Text);
 
-            ReviewDestinationText.Text = GetSafeText(DestinationTextBox.Text);
+            ReviewDestinationText.Text = GetSafeText(DestinationComboBox.Text);
             ReviewCountryText.Text = GetSafeText(CountryTextBox.Text);
             ReviewStartDateText.Text = StartDatePicker.SelectedDate?.ToString("dd MMM yyyy") ?? "-";
             ReviewEndDateText.Text = EndDatePicker.SelectedDate?.ToString("dd MMM yyyy") ?? "-";
@@ -378,10 +397,19 @@ namespace TravelAgency.WPF.Views
 
             return 0;
         }
+        private static decimal ParseDecimal(string text)
+        {
+            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal value))
+                return value;
 
+            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value))
+                return value;
+
+            return 0m;
+        }
         private void UpdateLeftPreview()
         {
-            string destination = GetSafeText(DestinationTextBox.Text);
+            string destination = GetSafeText(DestinationComboBox.Text);
             string packageName = GetSafeText(PackageNameTextBox.Text);
             string description = GetSafeText(ShortDescriptionTextBox.Text);
 
@@ -400,7 +428,8 @@ namespace TravelAgency.WPF.Views
             PreviewDestinationCodeText.Text = destination == "-" ? "TRIP" : destination.ToUpperInvariant();
             PreviewPackageNameText.Text = packageName;
             PreviewDescriptionText.Text = description == "-" ? "Package preview" : description;
-            PreviewTransportStayText.Text = $"{transport} + {accommodation}";
+            PreviewTransportStayText.Text =
+    $"{transport} + {accommodation} ({AccommodationNameTextBox.Text})";
             PreviewPriceText.Text = $"{finalPrice:F2}";
         }
 
@@ -416,7 +445,7 @@ namespace TravelAgency.WPF.Views
 
             ShortDescriptionTextBox.Text = "";
 
-            DestinationTextBox.Text = _editingTrip.Season?.Name ?? _editingTrip.Name;
+            DestinationComboBox.Text = _editingTrip.Season?.Name ?? _editingTrip.Name;
             CountryTextBox.Text = "Unknown";
 
             StartDatePicker.SelectedDate = _editingTrip.Season?.StartDate;
@@ -553,6 +582,166 @@ namespace TravelAgency.WPF.Views
             if (currentStep == 5)
                 UpdateReviewPanel();
         }
+        private async void SearchHotelsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string destination = DestinationComboBox.Text?.Trim() ?? string.Empty;
+                DateTime? checkIn = StartDatePicker.SelectedDate;
+                DateTime? checkOut = EndDatePicker.SelectedDate;
 
+                if (string.IsNullOrWhiteSpace(destination))
+                {
+                    MessageBox.Show("Select a destination first.", "Hotel Search", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!checkIn.HasValue || !checkOut.HasValue)
+                {
+                    MessageBox.Show("Select start and end dates first.", "Hotel Search", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (checkOut.Value <= checkIn.Value)
+                {
+                    MessageBox.Show("End Date must be after Start Date.", "Hotel Search", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                SearchHotelsButton.IsEnabled = false;
+                SearchHotelsButton.Content = "Searching...";
+                HotelsListBox.ItemsSource = null;
+
+                _hotelResults = await _hotelSearchProvider.SearchHotelsAsync(
+                    destination,
+                    checkIn.Value,
+                    checkOut.Value,
+                    2);
+
+                HotelsListBox.ItemsSource = _hotelResults.Take(10).ToList();
+
+                if (_hotelResults.Count == 0)
+                {
+                    MessageBox.Show("No hotels found for the selected destination and dates.",
+                        "Hotel Search",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Hotel Search Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                SearchHotelsButton.IsEnabled = true;
+                SearchHotelsButton.Content = "Search Hotels";
+            }
+        }
+        private void HotelsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (HotelsListBox.SelectedItem is not HotelSearchOption selectedHotel)
+                return;
+
+            AccommodationNameTextBox.Text = selectedHotel.Name ?? "";
+
+            SetComboBoxByText(AccommodationTypeComboBox, "Hotel");
+
+            if (selectedHotel.PricePerNight.HasValue && selectedHotel.PricePerNight.Value > 0)
+            {
+                int nights = 1;
+
+                if (StartDatePicker.SelectedDate.HasValue && EndDatePicker.SelectedDate.HasValue)
+                {
+                    nights = (EndDatePicker.SelectedDate.Value - StartDatePicker.SelectedDate.Value).Days + 1;
+                    if (nights <= 0)
+                        nights = 1;
+                }
+
+                decimal total = (decimal)selectedHotel.PricePerNight.Value * nights;
+
+                BasePriceTextBox.Text = total.ToString("F2", CultureInfo.InvariantCulture);
+            }
+
+            
+            RecalculatePrice();
+
+            UpdateLeftPreview();
+
+            if (currentStep == 5)
+                UpdateReviewPanel();
+        }
+        private async void DestinationComboBox_KeyUp(object sender, KeyEventArgs e)
+        {
+            try
+            {
+                string query = DestinationComboBox.Text?.Trim() ?? string.Empty;
+
+                if (query.Length < 3)
+                {
+                    DestinationComboBox.ItemsSource = null;
+                    DestinationComboBox.IsDropDownOpen = false;
+                    return;
+                }
+
+                _locationSearchCts?.Cancel();
+                _locationSearchCts = new CancellationTokenSource();
+                var token = _locationSearchCts.Token;
+
+                await Task.Delay(600, token);
+
+                if (token.IsCancellationRequested)
+                    return;
+
+                _locationResults = await _locationSearchProvider.SearchLocationsAsync(query, 10);
+
+                if (token.IsCancellationRequested)
+                    return;
+
+                DestinationComboBox.ItemsSource = _locationResults;
+                DestinationComboBox.IsDropDownOpen = _locationResults.Count > 0;
+            }
+            catch (TaskCanceledException)
+            {
+                // normal, user continues typing
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Location Search Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        private void DestinationComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DestinationComboBox.SelectedItem is LocationOption selectedLocation)
+            {
+                DestinationComboBox.Text = selectedLocation.City;
+                CountryTextBox.Text = selectedLocation.Country;
+
+                DestinationComboBox.IsDropDownOpen = false;
+
+                UpdateLeftPreview();
+                if (currentStep == 5)
+                    UpdateReviewPanel();
+            }
+        }
+
+        private void RecalculatePrice()
+        {
+            decimal basePrice = ParseDecimal(BasePriceTextBox.Text);
+            decimal discount = ParseDecimal(DiscountTextBox.Text);
+            decimal vat = ParseDecimal(VatTextBox.Text);
+            decimal extra = ParseDecimal(ExtraChargesTextBox.Text);
+
+            decimal priceAfterDiscount = basePrice * (1 - discount / 100);
+            decimal priceWithVat = priceAfterDiscount * (1 + vat / 100);
+            decimal finalPrice = priceWithVat + extra;
+
+            EstimatedFinalPriceText.Text = $"€ {finalPrice:F2}";
+
+            UpdateLeftPreview();
+
+            if (currentStep == 5)
+                UpdateReviewPanel();
+        }
     }
 }
