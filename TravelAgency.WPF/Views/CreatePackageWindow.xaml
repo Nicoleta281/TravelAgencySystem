@@ -1,4 +1,4 @@
-﻿<Window x:Class="TravelAgency.WPF.Views.CreatePackageWindow"
+<Window x:Class="TravelAgency.WPF.Views.CreatePackageWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Create New Package"
@@ -396,6 +396,7 @@
                       Margin="0,8,0,0"
                       FontSize="14">
                                             <ComboBoxItem Content="Hotel"/>
+                                            <ComboBoxItem Content="Hostel"/>
                                             <ComboBoxItem Content="Resort"/>
                                             <ComboBoxItem Content="Apartment"/>
                                             <ComboBoxItem Content="Villa"/>

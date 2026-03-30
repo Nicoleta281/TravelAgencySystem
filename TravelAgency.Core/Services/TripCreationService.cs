@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TravelAgency.Core.Builders;
 using TravelAgency.Core.Factories.AbstractFactory;
 using TravelAgency.Core.Models;
@@ -32,6 +32,10 @@ namespace TravelAgency.Core.Services
 
             // completare explicita a tuturor campurilor importante
             trip.Name = request.PackageName ?? "";
+            trip.TripType = request.TripType ?? "";
+            trip.Category = request.Category ?? "";
+            trip.ShortDescription = request.ShortDescription ?? "";
+            trip.BasePrice = request.BasePrice;
 
             // Only override price when FinalPrice provided (>0). Builder already sets price otherwise.
             if (request.FinalPrice > 0)
@@ -73,7 +77,7 @@ namespace TravelAgency.Core.Services
             if (request.AirportTransfer)
                 trip.AddExtraService(new AirportTransfer());
 
-            if (request.TravelInsurance)    trip.AddExtraService(   
+            if (request.TravelInsurance)
                 trip.AddExtraService(new TravelInsurance());
 
             if (request.TourGuide)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -475,13 +475,32 @@ namespace TravelAgency.WPF.Views
 
             PackageNameTextBox.Text = _editingTrip.Name;
 
-            SetComboBoxByText(TripTypeComboBox, InferTripTypeFromName(_editingTrip.Name));
-            SetComboBoxByText(CategoryComboBox, InferCategoryFromName(_editingTrip.Name));
+            var tripType = !string.IsNullOrWhiteSpace(_editingTrip.TripType)
+                ? _editingTrip.TripType
+                : InferTripTypeFromName(_editingTrip.Name);
 
-            ShortDescriptionTextBox.Text = "";
+            var category = !string.IsNullOrWhiteSpace(_editingTrip.Category)
+                ? _editingTrip.Category
+                : InferCategoryFromName(_editingTrip.Name);
+
+            SetComboBoxByText(TripTypeComboBox, tripType);
+            SetComboBoxByText(CategoryComboBox, category);
+
+            ShortDescriptionTextBox.Text = _editingTrip.ShortDescription ?? "";
 
             DestinationComboBox.Text = _editingTrip.Destination;
             CountryTextBox.Text = _editingTrip.Country;
+
+            // Fallback for older/quick-created packages where destination/country weren't persisted,
+            // but SeasonName was generated like "Paris, France trip".
+            if (string.IsNullOrWhiteSpace(DestinationComboBox.Text) || string.IsNullOrWhiteSpace(CountryTextBox.Text))
+            {
+                var (dest, country) = InferDestinationCountryFromSeason(_editingTrip.Season?.Name);
+                if (string.IsNullOrWhiteSpace(DestinationComboBox.Text))
+                    DestinationComboBox.Text = dest;
+                if (string.IsNullOrWhiteSpace(CountryTextBox.Text))
+                    CountryTextBox.Text = country;
+            }
 
             StartDatePicker.SelectedDate = _editingTrip.Season?.StartDate;
             EndDatePicker.SelectedDate = _editingTrip.Season?.EndDate;
@@ -506,7 +525,13 @@ namespace TravelAgency.WPF.Views
             SetComboBoxByText(AccommodationTypeComboBox, NormalizeStayName(_editingTrip.StayName));
             AccommodationNameTextBox.Text = _editingTrip.AccommodationName;
 
-            SetComboBoxByText(MealPlanComboBox, _editingTrip.MealPlan);
+            var mealPlan = _editingTrip.MealPlan;
+            if (string.IsNullOrWhiteSpace(mealPlan) &&
+                _editingTrip.ExtraServiceNames.Any(x => x.Contains("Breakfast", StringComparison.OrdinalIgnoreCase)))
+            {
+                mealPlan = "Breakfast";
+            }
+            SetComboBoxByText(MealPlanComboBox, mealPlan);
             AvailableSeatsTextBox.Text = _editingTrip.AvailableSeats.ToString();
 
             AirportTransferCheckBox.IsChecked =
@@ -521,10 +546,13 @@ namespace TravelAgency.WPF.Views
             FreeCancellationCheckBox.IsChecked =
                 _editingTrip.ExtraServiceNames.Any(x => x.Contains("Cancellation", StringComparison.OrdinalIgnoreCase));
 
-            BasePriceTextBox.Text = _editingTrip.Price.ToString("F2", CultureInfo.InvariantCulture);
+            var basePrice = _editingTrip.BasePrice > 0 ? _editingTrip.BasePrice : _editingTrip.Price;
+            BasePriceTextBox.Text = basePrice.ToString("F2", CultureInfo.InvariantCulture);
             DiscountTextBox.Text = _editingTrip.DiscountPercent.ToString("F2", CultureInfo.InvariantCulture);
             VatTextBox.Text = _editingTrip.VatPercent.ToString("F2", CultureInfo.InvariantCulture);
             ExtraChargesTextBox.Text = _editingTrip.ExtraCharges.ToString("F2", CultureInfo.InvariantCulture);
+
+            PricingNotesTextBox.Text = _editingTrip.PricingNotes ?? "";
 
             _isLoading = false;
 
@@ -597,6 +625,9 @@ namespace TravelAgency.WPF.Views
             if (stayName.Contains("Hotel", StringComparison.OrdinalIgnoreCase))
                 return "Hotel";
 
+            if (stayName.Contains("Hostel", StringComparison.OrdinalIgnoreCase))
+                return "Hostel";
+
             if (stayName.Contains("Resort", StringComparison.OrdinalIgnoreCase))
                 return "Resort";
 
@@ -607,6 +638,23 @@ namespace TravelAgency.WPF.Views
                 return "Villa";
 
             return "Hotel";
+        }
+
+        private static (string destination, string country) InferDestinationCountryFromSeason(string? seasonName)
+        {
+            if (string.IsNullOrWhiteSpace(seasonName))
+                return ("", "");
+
+            // Example: "Paris, France trip"
+            var name = seasonName.Trim();
+            if (name.EndsWith("trip", StringComparison.OrdinalIgnoreCase))
+                name = name[..^3].Trim();
+
+            var parts = name.Split(',', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
+                return ("", "");
+
+            return (parts[0], parts[1]);
         }
 
         private void DatesChanged(object sender, SelectionChangedEventArgs e)

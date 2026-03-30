@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -12,6 +12,13 @@ namespace TravelAgency.Core.Data.Entities
 
         public string Name { get; set; } = "";
         public double Price { get; set; }
+
+        // UI fields
+        public string TripType { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string ShortDescription { get; set; } = "";
+        public string PricingNotes { get; set; } = "";
+        public double BasePrice { get; set; }
 
         // Season
         public string SeasonName { get; set; } = "";

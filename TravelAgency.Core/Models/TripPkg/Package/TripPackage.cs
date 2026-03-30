@@ -1,4 +1,4 @@
-﻿using TravelAgency.Core.Interfaces;
+using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Prototypes;
 using TravelAgency.Core.Patterns.Composite;
 
@@ -9,6 +9,13 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public double Price { get; set; }
+
+        // UI fields (persisted in DB)
+        public string TripType { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string ShortDescription { get; set; } = "";
+        public string PricingNotes { get; set; } = "";
+        public double BasePrice { get; set; }
 
         public string Destination { get; set; } = "";
         public string Country { get; set; } = "";

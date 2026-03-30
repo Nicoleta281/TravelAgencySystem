@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using TravelAgency.Core.Data.Entities;
 using TravelAgency.Core.Interfaces;
@@ -23,6 +23,12 @@ namespace TravelAgency.Core.Data.Mappers
                 Id = trip.Id,
                 Name = trip.Name,
                 Price = trip.Price,
+
+                TripType = trip.TripType ?? "",
+                Category = trip.Category ?? "",
+                ShortDescription = trip.ShortDescription ?? "",
+                PricingNotes = trip.PricingNotes ?? "",
+                BasePrice = trip.BasePrice,
 
                 SeasonName = season.Name,
                 SeasonStartDate = DateTime.SpecifyKind(season.StartDate, DateTimeKind.Utc),
@@ -58,6 +64,12 @@ namespace TravelAgency.Core.Data.Mappers
                 Id = e.Id,
                 Name = e.Name,
                 Price = e.Price,
+
+                TripType = e.TripType ?? "",
+                Category = e.Category ?? "",
+                ShortDescription = e.ShortDescription ?? "",
+                PricingNotes = e.PricingNotes ?? "",
+                BasePrice = e.BasePrice,
 
                 TransportDisplayName = e.TransportType ?? "",
                 StayDisplayName = e.StayType ?? "",
@@ -105,6 +117,10 @@ namespace TravelAgency.Core.Data.Mappers
                 "Breakfast" => new Breakfast(),
                 "Guide" => new Guide(),
                 "Insurance" => new Insurance(),
+                "AirportTransfer" => new AirportTransfer(),
+                "TravelInsurance" => new TravelInsurance(),
+                "TourGuide" => new TourGuide(),
+                "FreeCancellation" => new FreeCancellation(),
                 _ => null
             };
         }
