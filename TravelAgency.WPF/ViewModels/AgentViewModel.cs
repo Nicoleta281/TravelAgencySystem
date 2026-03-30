@@ -12,6 +12,7 @@ using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
+using TravelAgency.WPF.Views;
 
 namespace TravelAgency.WPF.ViewModels
 {
@@ -167,7 +168,16 @@ namespace TravelAgency.WPF.ViewModels
                 };
 
                 var trip = _tripCreationService.CreateTrip(request);
+                trip.Destination = request.Destination;
+                trip.Country = request.Country;
+                trip.DepartureCity = request.DepartureCity;
+                trip.AccommodationName = request.AccommodationName;
+                trip.MealPlan = request.MealPlan;
+                trip.AvailableSeats = request.AvailableSeats;
 
+                trip.DiscountPercent = request.DiscountPercent;
+                trip.VatPercent = request.VatPercent;
+                trip.ExtraCharges = request.ExtraCharges;
                 _repo.Add(trip);
                 Trips.Add(trip);
                 SelectedTrip = trip;
@@ -226,7 +236,22 @@ namespace TravelAgency.WPF.ViewModels
 
                 var trip = director.Make(request);
 
+                
+                trip.Destination = request.Destination;
+                trip.Country = request.Country;
+                trip.DepartureCity = request.DepartureCity;
+                trip.AccommodationName = request.AccommodationName;
+                trip.MealPlan = request.MealPlan;
+                trip.AvailableSeats = request.AvailableSeats;
+
+                trip.DiscountPercent = request.DiscountPercent;
+                trip.VatPercent = request.VatPercent;
+                trip.ExtraCharges = request.ExtraCharges;
+                
+
                 _repo.Add(trip);
+
+          
                 Trips.Add(trip);
                 SelectedTrip = trip;
 
@@ -270,13 +295,13 @@ namespace TravelAgency.WPF.ViewModels
                 if (SelectedTrip == null)
                     return;
 
-                var tripToDelete = SelectedTrip;
-                var id = tripToDelete.Id;
+                var id = SelectedTrip.Id;
 
                 _repo.Delete(id);
-                Trips.Remove(tripToDelete);
 
-                SelectedTrip = Trips.Count > 0 ? Trips[0] : null;
+                LoadTrips(); 
+
+                SelectedTrip = Trips.FirstOrDefault();
 
                 Status = "Trip deleted successfully.";
             }
@@ -293,38 +318,17 @@ namespace TravelAgency.WPF.ViewModels
                 if (SelectedTrip == null)
                     return;
 
-                var tripType = string.IsNullOrWhiteSpace(TripType) ? "Budget" : TripType;
-                var transportType = string.IsNullOrWhiteSpace(TransportType) ? "Train" : TransportType;
+                int selectedId = SelectedTrip.Id;
 
-                var name = string.IsNullOrWhiteSpace(Name)
-                    ? SelectedTrip.Name
-                    : Name.Trim();
+                var window = new CreatePackageWindow(SelectedTrip);
+                var result = window.ShowDialog();
 
-                if (!double.TryParse(PriceText, out var price))
+                if (result == true)
                 {
-                    Status = "Pret invalid.";
-                    return;
+                    LoadTrips();
+                    SelectedTrip = Trips.FirstOrDefault(x => x.Id == selectedId);
+                    Status = "Trip updated successfully.";
                 }
-
-                var request = new TripRequest
-                {
-                    PackageName = name,
-                    TripType = tripType,
-                    Category = tripType,
-                    TransportType = transportType,
-                    BasePrice = price,
-                    FinalPrice = price
-                };
-
-                var updatedTrip = _tripCreationService.CreateTrip(request);
-                updatedTrip.Id = SelectedTrip.Id;
-
-                _repo.Update(updatedTrip);
-
-                LoadTrips();
-                SelectedTrip = Trips.FirstOrDefault(x => x.Id == updatedTrip.Id);
-
-                Status = "Trip updated successfully.";
             }
             catch (Exception ex)
             {

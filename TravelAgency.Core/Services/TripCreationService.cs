@@ -3,6 +3,7 @@ using TravelAgency.Core.Builders;
 using TravelAgency.Core.Factories.AbstractFactory;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Models.TripPkg.Services;
 
 namespace TravelAgency.Core.Services
 {
@@ -23,25 +24,67 @@ namespace TravelAgency.Core.Services
 
             var transport = factory.CreateTransport(transportType);
             var stay = factory.CreateStay();
-            var extraService = factory.CreateExtraService();
 
             var builder = new TripPackageBuilder();
             var director = new TripDirector(builder);
 
             var trip = director.Make(request);
 
-            // Componentele create prin Factory
+            // completare explicita a tuturor campurilor importante
+            trip.Name = request.PackageName ?? "";
+
+            // Only override price when FinalPrice provided (>0). Builder already sets price otherwise.
+            if (request.FinalPrice > 0)
+                trip.Price = request.FinalPrice;
+
+            trip.Destination = request.Destination ?? "";
+            trip.Country = request.Country ?? "";
+            trip.DepartureCity = request.DepartureCity ?? "";
+            trip.AccommodationName = request.AccommodationName ?? "";
+            trip.MealPlan = request.MealPlan ?? "";
+            trip.AvailableSeats = request.AvailableSeats;
+
+            trip.DiscountPercent = request.DiscountPercent;
+            trip.VatPercent = request.VatPercent;
+            trip.ExtraCharges = request.ExtraCharges;
+
+            // season: only set if both dates provided to match builder behavior
+            if (request.StartDate.HasValue && request.EndDate.HasValue)
+            {
+                trip.Season = new Season
+                {
+                    Name = $"{request.Destination}, {request.Country} trip",
+                    StartDate = request.StartDate.Value,
+                    EndDate = request.EndDate.Value
+                };
+            }
+
+            // componente create prin factory
             trip.Transport = transport;
             trip.Stay = stay;
-            trip.TransportDisplayName = request.TransportType;
-            trip.StayDisplayName = request.AccommodationType;
-            
 
-            if (extraService != null)
-                trip.AddExtraService(extraService);
+            // Use resolved transportType/stay fallback so display matches actual components
+            trip.TransportDisplayName = !string.IsNullOrWhiteSpace(request.TransportType) ? request.TransportType : transportType;
+            trip.StayDisplayName = request.AccommodationType ?? "";
 
-            // minim o zi, ca sa nu ramana gol
-            trip.AddDay(new TripDay());
+            // refacem serviciile suplimentare exact dupa checkbox-uri
+            trip.ExtraServices.Clear();
+
+            if (request.AirportTransfer)
+                trip.AddExtraService(new AirportTransfer());
+
+            if (request.TravelInsurance)    trip.AddExtraService(   
+                trip.AddExtraService(new TravelInsurance());
+
+            if (request.TourGuide)
+                trip.AddExtraService(new TourGuide());
+
+            if (request.FreeCancellation)
+                trip.AddExtraService(new FreeCancellation());
+
+            // minim o zi
+            if (trip.Days.Count == 0)
+                trip.AddDay(new TripDay());
 
             return trip;
         }

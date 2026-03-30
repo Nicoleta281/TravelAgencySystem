@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
+using TravelAgency.Core.Facade;
 using System.Windows.Media;
 using TravelAgency.Core.Adapters.GeoDb;
 using TravelAgency.Core.Adapters.SerpApi;
@@ -15,6 +15,7 @@ using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Patterns.Composite;
 using TravelAgency.Core.Services;
 using System.Threading;
 using System.Windows.Input;
@@ -27,12 +28,12 @@ namespace TravelAgency.WPF.Views
 
 
 
-        private readonly TripCreationService _tripCreationService = new();
-        private readonly ITripPackageRepository _repo = new EfTripPackageRepository();
+        
+       
         private readonly TripPackage? _editingTrip;
-        private readonly IHotelSearchProvider _hotelSearchProvider = new SerpApiHotelAdapter();
+       
         private List<HotelSearchOption> _hotelResults = new();
-        private readonly ILocationSearchProvider _locationSearchProvider = new GeoDbLocationAdapter();
+        private readonly TravelPackageFacade _facade = new TravelPackageFacade();
         private List<LocationOption> _locationResults = new();
         private bool _isUpdatingDestinationSuggestions;
         private CancellationTokenSource? _locationSearchCts;
@@ -41,10 +42,23 @@ namespace TravelAgency.WPF.Views
         public CreatePackageWindow(TripPackage? tripToEdit = null)
         {
             InitializeComponent();
+
             BasePriceTextBox.TextChanged += (s, e) => RecalculatePrice();
             DiscountTextBox.TextChanged += (s, e) => RecalculatePrice();
             VatTextBox.TextChanged += (s, e) => RecalculatePrice();
             ExtraChargesTextBox.TextChanged += (s, e) => RecalculatePrice();
+
+            AirportTransferCheckBox.Checked += (s, e) => RecalculatePrice();
+            AirportTransferCheckBox.Unchecked += (s, e) => RecalculatePrice();
+
+            TravelInsuranceCheckBox.Checked += (s, e) => RecalculatePrice();
+            TravelInsuranceCheckBox.Unchecked += (s, e) => RecalculatePrice();
+
+            TourGuideCheckBox.Checked += (s, e) => RecalculatePrice();
+            TourGuideCheckBox.Unchecked += (s, e) => RecalculatePrice();
+
+            FreeCancellationCheckBox.Checked += (s, e) => RecalculatePrice();
+            FreeCancellationCheckBox.Unchecked += (s, e) => RecalculatePrice();
 
             _editingTrip = tripToEdit;
 
@@ -109,9 +123,14 @@ namespace TravelAgency.WPF.Views
             double vat = ParseDouble(VatTextBox.Text, "VAT");
             double extraCharges = ParseDouble(ExtraChargesTextBox.Text, "Extra Charges");
 
-            double afterDiscount = basePrice - (basePrice * discount / 100.0);
-            double afterVat = afterDiscount + (afterDiscount * vat / 100.0);
-            double finalPrice = afterVat + extraCharges;
+            decimal compositePrice = GetCompositeServicesPrice();
+
+            double finalPrice = (double)_facade.CalculateFinalPrice(
+                (decimal)basePrice,
+                (decimal)discount,
+                (decimal)vat,
+                (decimal)extraCharges,
+                compositePrice);
 
             return new TripRequest
             {
@@ -158,12 +177,11 @@ namespace TravelAgency.WPF.Views
                 try
                 {
                     var request = BuildTripRequestFromForm();
-                    var trip = _tripCreationService.CreateTrip(request);
+                    TripPackage trip;
 
                     if (_editingTrip != null)
                     {
-                        trip.Id = _editingTrip.Id;
-                        _repo.Update(trip);
+                        trip = _facade.CreateAndUpdatePackage(request, _editingTrip.Id);
 
                         MessageBox.Show(
                             $"Package updated successfully!\n\nName: {trip.Name}\nPrice: {trip.Price:F2}",
@@ -173,7 +191,7 @@ namespace TravelAgency.WPF.Views
                     }
                     else
                     {
-                        _repo.Add(trip);
+                        trip = _facade.CreateAndSavePackage(request);
 
                         MessageBox.Show(
                             $"Package created successfully!\n\nName: {trip.Name}\nPrice: {trip.Price:F2}",
@@ -322,6 +340,7 @@ namespace TravelAgency.WPF.Views
             ReviewCountryText.Text = GetSafeText(CountryTextBox.Text);
             ReviewStartDateText.Text = StartDatePicker.SelectedDate?.ToString("dd MMM yyyy") ?? "-";
             ReviewEndDateText.Text = EndDatePicker.SelectedDate?.ToString("dd MMM yyyy") ?? "-";
+
             if (!string.IsNullOrWhiteSpace(NumberOfDaysTextBox.Text))
             {
                 ReviewNumberOfDaysText.Text = NumberOfDaysTextBox.Text.Trim();
@@ -329,7 +348,7 @@ namespace TravelAgency.WPF.Views
             else if (StartDatePicker.SelectedDate.HasValue && EndDatePicker.SelectedDate.HasValue)
             {
                 ReviewNumberOfDaysText.Text =
-                    (EndDatePicker.SelectedDate.Value - StartDatePicker.SelectedDate.Value).Days.ToString();
+                    ((EndDatePicker.SelectedDate.Value - StartDatePicker.SelectedDate.Value).Days + 1).ToString();
             }
             else
             {
@@ -350,9 +369,14 @@ namespace TravelAgency.WPF.Views
             double vat = ParseDoubleOrZero(VatTextBox.Text);
             double extraCharges = ParseDoubleOrZero(ExtraChargesTextBox.Text);
 
-            double afterDiscount = basePrice - (basePrice * discount / 100.0);
-            double afterVat = afterDiscount + (afterDiscount * vat / 100.0);
-            double finalPrice = afterVat + extraCharges;
+            decimal compositePrice = GetCompositeServicesPrice();
+
+            double finalPrice = (double)_facade.CalculateFinalPrice(
+                (decimal)basePrice,
+                (decimal)discount,
+                (decimal)vat,
+                (decimal)extraCharges,
+                compositePrice);
 
             ReviewBasePriceText.Text = $"{basePrice:F2}";
             ReviewDiscountText.Text = $"{discount:F2}%";
@@ -416,27 +440,38 @@ namespace TravelAgency.WPF.Views
             string transport = GetSafeText(GetComboBoxText(TransportTypeComboBox));
             string accommodation = GetSafeText(GetComboBoxText(AccommodationTypeComboBox));
 
-            double basePrice = ParseDoubleOrZero(BasePriceTextBox.Text);
-            double discount = ParseDoubleOrZero(DiscountTextBox.Text);
-            double vat = ParseDoubleOrZero(VatTextBox.Text);
-            double extraCharges = ParseDoubleOrZero(ExtraChargesTextBox.Text);
+            decimal basePrice = ParseDecimal(BasePriceTextBox.Text);
+            decimal discount = ParseDecimal(DiscountTextBox.Text);
+            decimal vat = ParseDecimal(VatTextBox.Text);
+            decimal extraCharges = ParseDecimal(ExtraChargesTextBox.Text);
 
-            double afterDiscount = basePrice - (basePrice * discount / 100.0);
-            double afterVat = afterDiscount + (afterDiscount * vat / 100.0);
-            double finalPrice = afterVat + extraCharges;
+            decimal compositePrice = GetCompositeServicesPrice();
+
+            decimal finalPrice = _facade.CalculateFinalPrice(
+                basePrice,
+                discount,
+                vat,
+                extraCharges,
+                compositePrice);
 
             PreviewDestinationCodeText.Text = destination == "-" ? "TRIP" : destination.ToUpperInvariant();
             PreviewPackageNameText.Text = packageName;
             PreviewDescriptionText.Text = description == "-" ? "Package preview" : description;
+
             PreviewTransportStayText.Text =
-    $"{transport} + {accommodation} ({AccommodationNameTextBox.Text})";
+                $"{transport} + {accommodation} ({AccommodationNameTextBox.Text})";
+
             PreviewPriceText.Text = $"{finalPrice:F2}";
         }
+
+        private bool _isLoading;
 
         private void LoadTripIntoForm()
         {
             if (_editingTrip == null)
                 return;
+
+            _isLoading = true;
 
             PackageNameTextBox.Text = _editingTrip.Name;
 
@@ -445,8 +480,8 @@ namespace TravelAgency.WPF.Views
 
             ShortDescriptionTextBox.Text = "";
 
-            DestinationComboBox.Text = _editingTrip.Season?.Name ?? _editingTrip.Name;
-            CountryTextBox.Text = "Unknown";
+            DestinationComboBox.Text = _editingTrip.Destination;
+            CountryTextBox.Text = _editingTrip.Country;
 
             StartDatePicker.SelectedDate = _editingTrip.Season?.StartDate;
             EndDatePicker.SelectedDate = _editingTrip.Season?.EndDate;
@@ -458,29 +493,44 @@ namespace TravelAgency.WPF.Views
             else if (_editingTrip.Season != null)
             {
                 NumberOfDaysTextBox.Text =
-                    (_editingTrip.Season.EndDate - _editingTrip.Season.StartDate).Days.ToString();
+                    ((_editingTrip.Season.EndDate - _editingTrip.Season.StartDate).Days + 1).ToString();
+            }
+            else
+            {
+                NumberOfDaysTextBox.Text = "";
             }
 
             SetComboBoxByText(TransportTypeComboBox, NormalizeTransportName(_editingTrip.TransportName));
-            DepartureCityTextBox.Text = "";
+            DepartureCityTextBox.Text = _editingTrip.DepartureCity;
 
             SetComboBoxByText(AccommodationTypeComboBox, NormalizeStayName(_editingTrip.StayName));
-            AccommodationNameTextBox.Text = _editingTrip.StayName == "N/A" ? "" : _editingTrip.StayName;
+            AccommodationNameTextBox.Text = _editingTrip.AccommodationName;
 
-            bool hasBreakfast = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Breakfast"));
-            SetComboBoxByText(MealPlanComboBox, hasBreakfast ? "Breakfast" : "Half Board");
+            SetComboBoxByText(MealPlanComboBox, _editingTrip.MealPlan);
+            AvailableSeatsTextBox.Text = _editingTrip.AvailableSeats.ToString();
 
-            AvailableSeatsTextBox.Text = "0";
+            AirportTransferCheckBox.IsChecked =
+                _editingTrip.ExtraServiceNames.Any(x => x.Contains("Transfer", StringComparison.OrdinalIgnoreCase));
 
-            AirportTransferCheckBox.IsChecked = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Transfer"));
-            TravelInsuranceCheckBox.IsChecked = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Insurance"));
-            TourGuideCheckBox.IsChecked = _editingTrip.ExtraServiceNames.Any(x => x.Contains("Guide"));
-            FreeCancellationCheckBox.IsChecked = false;
+            TravelInsuranceCheckBox.IsChecked =
+                _editingTrip.ExtraServiceNames.Any(x => x.Contains("Insurance", StringComparison.OrdinalIgnoreCase));
 
-            BasePriceTextBox.Text = _editingTrip.Price.ToString("F2");
-            DiscountTextBox.Text = "0";
-            VatTextBox.Text = "0";
-            ExtraChargesTextBox.Text = "0";
+            TourGuideCheckBox.IsChecked =
+                _editingTrip.ExtraServiceNames.Any(x => x.Contains("Guide", StringComparison.OrdinalIgnoreCase));
+
+            FreeCancellationCheckBox.IsChecked =
+                _editingTrip.ExtraServiceNames.Any(x => x.Contains("Cancellation", StringComparison.OrdinalIgnoreCase));
+
+            BasePriceTextBox.Text = _editingTrip.Price.ToString("F2", CultureInfo.InvariantCulture);
+            DiscountTextBox.Text = _editingTrip.DiscountPercent.ToString("F2", CultureInfo.InvariantCulture);
+            VatTextBox.Text = _editingTrip.VatPercent.ToString("F2", CultureInfo.InvariantCulture);
+            ExtraChargesTextBox.Text = _editingTrip.ExtraCharges.ToString("F2", CultureInfo.InvariantCulture);
+
+            _isLoading = false;
+
+            RecalculatePrice();
+            UpdateLeftPreview();
+            UpdateReviewPanel();
         }
 
         private static void SetComboBoxByText(ComboBox comboBox, string text)
@@ -612,7 +662,7 @@ namespace TravelAgency.WPF.Views
                 SearchHotelsButton.Content = "Searching...";
                 HotelsListBox.ItemsSource = null;
 
-                _hotelResults = await _hotelSearchProvider.SearchHotelsAsync(
+                _hotelResults = await _facade.SearchHotelsAsync(
                     destination,
                     checkIn.Value,
                     checkOut.Value,
@@ -644,28 +694,31 @@ namespace TravelAgency.WPF.Views
                 return;
 
             AccommodationNameTextBox.Text = selectedHotel.Name ?? "";
-
             SetComboBoxByText(AccommodationTypeComboBox, "Hotel");
 
-            if (selectedHotel.PricePerNight.HasValue && selectedHotel.PricePerNight.Value > 0)
+            int nights = 1;
+
+            if (StartDatePicker.SelectedDate.HasValue && EndDatePicker.SelectedDate.HasValue)
             {
-                int nights = 1;
-
-                if (StartDatePicker.SelectedDate.HasValue && EndDatePicker.SelectedDate.HasValue)
-                {
-                    nights = (EndDatePicker.SelectedDate.Value - StartDatePicker.SelectedDate.Value).Days + 1;
-                    if (nights <= 0)
-                        nights = 1;
-                }
-
-                decimal total = (decimal)selectedHotel.PricePerNight.Value * nights;
-
-                BasePriceTextBox.Text = total.ToString("F2", CultureInfo.InvariantCulture);
+                nights = (EndDatePicker.SelectedDate.Value - StartDatePicker.SelectedDate.Value).Days + 1;
+                if (nights <= 0)
+                    nights = 1;
             }
 
-            
-            RecalculatePrice();
+            decimal total = 0m;
 
+            if (selectedHotel.TotalPrice.HasValue && selectedHotel.TotalPrice.Value > 0)
+            {
+                total = (decimal)selectedHotel.TotalPrice.Value;
+            }
+            else if (selectedHotel.PricePerNight.HasValue && selectedHotel.PricePerNight.Value > 0)
+            {
+                total = (decimal)selectedHotel.PricePerNight.Value * nights;
+            }
+
+            BasePriceTextBox.Text = total.ToString("F2", CultureInfo.InvariantCulture);
+
+            RecalculatePrice();
             UpdateLeftPreview();
 
             if (currentStep == 5)
@@ -693,7 +746,7 @@ namespace TravelAgency.WPF.Views
                 if (token.IsCancellationRequested)
                     return;
 
-                _locationResults = await _locationSearchProvider.SearchLocationsAsync(query, 10);
+                _locationResults = await _facade.SearchLocationsAsync(query, 10);
 
                 if (token.IsCancellationRequested)
                     return;
@@ -727,21 +780,60 @@ namespace TravelAgency.WPF.Views
 
         private void RecalculatePrice()
         {
+            if (_isLoading)
+                return;
             decimal basePrice = ParseDecimal(BasePriceTextBox.Text);
             decimal discount = ParseDecimal(DiscountTextBox.Text);
             decimal vat = ParseDecimal(VatTextBox.Text);
             decimal extra = ParseDecimal(ExtraChargesTextBox.Text);
 
-            decimal priceAfterDiscount = basePrice * (1 - discount / 100);
-            decimal priceWithVat = priceAfterDiscount * (1 + vat / 100);
-            decimal finalPrice = priceWithVat + extra;
+            // ===== Composite =====
+            decimal compositePrice = 0m;
 
+            if (AirportTransferCheckBox.IsChecked == true)
+                compositePrice += 30;
+
+            if (TravelInsuranceCheckBox.IsChecked == true)
+                compositePrice += 20;
+
+            if (TourGuideCheckBox.IsChecked == true)
+                compositePrice += 25;
+
+            if (FreeCancellationCheckBox.IsChecked == true)
+                compositePrice += 15;
+
+            // ===== calcul final =====
+            decimal finalPrice = _facade.CalculateFinalPrice(
+                basePrice,
+                discount,
+                vat,
+                extra,
+                compositePrice);
             EstimatedFinalPriceText.Text = $"€ {finalPrice:F2}";
 
             UpdateLeftPreview();
 
             if (currentStep == 5)
                 UpdateReviewPanel();
+        }
+
+        private decimal GetCompositeServicesPrice()
+        {
+            decimal compositePrice = 0m;
+
+            if (AirportTransferCheckBox.IsChecked == true)
+                compositePrice += 30;
+
+            if (TravelInsuranceCheckBox.IsChecked == true)
+                compositePrice += 20;
+
+            if (TourGuideCheckBox.IsChecked == true)
+                compositePrice += 25;
+
+            if (FreeCancellationCheckBox.IsChecked == true)
+                compositePrice += 15;
+
+            return compositePrice;
         }
     }
 }

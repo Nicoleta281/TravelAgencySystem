@@ -24,5 +24,16 @@ namespace TravelAgency.Core.Data.Entities
 
         // Extras as CSV (ex: "Breakfast,Guide")
         public string ExtraServices { get; set; } = "";
+
+        public string Destination { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string DepartureCity { get; set; } = "";
+        public string AccommodationName { get; set; } = "";
+        public string MealPlan { get; set; } = "";
+        public int AvailableSeats { get; set; }
+
+        public double DiscountPercent { get; set; }
+        public double VatPercent { get; set; }
+        public double ExtraCharges { get; set; }
     }
 }

@@ -41,8 +41,7 @@ namespace TravelAgency.Core.Builders
                 };
             }
 
-            // Daca mai tarziu vrei, aici putem genera si Days
-            // momentan il lasam simplu
+          
         }
 
         public void BuildTransportAndAccommodation(TripRequest request)

@@ -22,5 +22,19 @@ namespace TravelAgency.Core.Models.Locations
         public int? HotelClass { get; set; }
 
         public string ThumbnailUrl { get; set; } = string.Empty;
+
+        public string PriceDisplay
+        {
+            get
+            {
+                if (PricePerNight.HasValue && PricePerNight.Value > 0)
+                    return $"Price per night: {PricePerNight.Value:F0} EUR";
+
+                if (TotalPrice.HasValue && TotalPrice.Value > 0)
+                    return $"Total price: {TotalPrice.Value:F0} EUR";
+
+                return "Price: N/A";
+            }
+        }
     }
 }

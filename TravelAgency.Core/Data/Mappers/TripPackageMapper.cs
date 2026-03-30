@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using TravelAgency.Core.Data.Entities;
+using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Models.TripPkg.Services;
 
 namespace TravelAgency.Core.Data.Mappers
 {
@@ -11,7 +13,6 @@ namespace TravelAgency.Core.Data.Mappers
         {
             var season = trip.Season ?? new Season
             {
-                
                 Name = "Default",
                 StartDate = DateTime.Now,
                 EndDate = DateTime.Now.AddMonths(3)
@@ -28,30 +29,83 @@ namespace TravelAgency.Core.Data.Mappers
                 SeasonEndDate = DateTime.SpecifyKind(season.EndDate, DateTimeKind.Utc),
 
                 TransportType = trip.Transport?.GetType().Name
-                ?? trip.TransportDisplayName
-                ?? "",
+                    ?? trip.TransportDisplayName
+                    ?? "",
+
                 StayType = trip.Stay?.GetType().Name
-           ?? trip.StayDisplayName
-           ?? "",
-                ExtraServices = string.Join(",", trip.ExtraServices.Select(x => x.GetType().Name))
+                    ?? trip.StayDisplayName
+                    ?? "",
+
+                ExtraServices = string.Join(",", trip.ExtraServices.Select(x => x.GetType().Name)),
+
+                Destination = trip.Destination,
+                Country = trip.Country,
+                DepartureCity = trip.DepartureCity,
+                AccommodationName = trip.AccommodationName,
+                MealPlan = trip.MealPlan,
+                AvailableSeats = trip.AvailableSeats,
+
+                DiscountPercent = trip.DiscountPercent,
+                VatPercent = trip.VatPercent,
+                ExtraCharges = trip.ExtraCharges
             };
         }
 
         public static TripPackage FromEntity(TripPackageEntity e)
         {
-            return new TripPackage
+            var trip = new TripPackage
             {
                 Id = e.Id,
                 Name = e.Name,
                 Price = e.Price,
+
                 TransportDisplayName = e.TransportType ?? "",
                 StayDisplayName = e.StayType ?? "",
+
+                Destination = e.Destination ?? "",
+                Country = e.Country ?? "",
+                DepartureCity = e.DepartureCity ?? "",
+                AccommodationName = e.AccommodationName ?? "",
+                MealPlan = e.MealPlan ?? "",
+                AvailableSeats = e.AvailableSeats,
+
+                DiscountPercent = e.DiscountPercent,
+                VatPercent = e.VatPercent,
+                ExtraCharges = e.ExtraCharges,
+
                 Season = new Season
                 {
                     Name = e.SeasonName,
                     StartDate = e.SeasonStartDate,
                     EndDate = e.SeasonEndDate
                 }
+            };
+
+            if (!string.IsNullOrWhiteSpace(e.ExtraServices))
+            {
+                var serviceNames = e.ExtraServices
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim());
+
+                foreach (var serviceName in serviceNames)
+                {
+                    var service = CreateExtraServiceByName(serviceName);
+                    if (service != null)
+                        trip.ExtraServices.Add(service);
+                }
+            }
+
+            return trip;
+        }
+
+        private static IExtraService? CreateExtraServiceByName(string serviceName)
+        {
+            return serviceName switch
+            {
+                "Breakfast" => new Breakfast(),
+                "Guide" => new Guide(),
+                "Insurance" => new Insurance(),
+                _ => null
             };
         }
     }

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using TravelAgency.Core.Interfaces;
+﻿using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Prototypes;
+using TravelAgency.Core.Patterns.Composite;
 
 namespace TravelAgency.Core.Models.TripPkg.Package
 {
@@ -11,6 +9,17 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public double Price { get; set; }
+
+        public string Destination { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string DepartureCity { get; set; } = "";
+        public string AccommodationName { get; set; } = "";
+        public string MealPlan { get; set; } = "";
+        public int AvailableSeats { get; set; }
+
+        public double DiscountPercent { get; set; }
+        public double VatPercent { get; set; }
+        public double ExtraCharges { get; set; }
         public Season? Season { get; set; }
 
         public List<TripDay> Days { get; set; } = new();
@@ -21,7 +30,7 @@ namespace TravelAgency.Core.Models.TripPkg.Package
 
         public string TransportDisplayName { get; set; } = "";
         public string StayDisplayName { get; set; } = "";
-
+        public IExtraServiceComponent? ExtraServiceBundle { get; set; }
         public int DaysCount
         {
             get

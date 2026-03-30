@@ -54,7 +54,16 @@ namespace TravelAgency.Core.Data.Repositories
             entity.TransportType = mapped.TransportType;
             entity.StayType = mapped.StayType;
             entity.ExtraServices = mapped.ExtraServices;
+            entity.Destination = mapped.Destination;
+            entity.Country = mapped.Country;
+            entity.DepartureCity = mapped.DepartureCity;
+            entity.AccommodationName = mapped.AccommodationName;
+            entity.MealPlan = mapped.MealPlan;
+            entity.AvailableSeats = mapped.AvailableSeats;
 
+            entity.DiscountPercent = mapped.DiscountPercent;
+            entity.VatPercent = mapped.VatPercent;
+            entity.ExtraCharges = mapped.ExtraCharges;
             db.SaveChanges();
         }
     }
