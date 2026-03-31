@@ -312,10 +312,10 @@
                                            Foreground="#374151"
                                            Text="{Binding BookingDate, StringFormat=Booked on: {0:dd MMM yyyy HH:mm}}"/>
 
-                                                <TextBlock Margin="0,4,0,0"
-                                           FontSize="14"
-                                           Foreground="#374151"
-                                           Text="{Binding Status.Name, StringFormat=Status: {0}}"/>
+                                                <TextBlock Text="{Binding Status.Name}"
+           FontSize="16"
+           Foreground="#666"
+           Margin="0,4,0,0"/>
 
                                                 <TextBlock Margin="0,4,0,0"
                                            FontSize="14"
@@ -473,7 +473,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <Button Content="Confirm Booking"
+                            <Button Content="Send Request"
         Height="42"
         Background="#3B82F6"
         Foreground="White"

@@ -9,6 +9,7 @@ using System.Windows.Input;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models;
+using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
@@ -20,8 +21,11 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
     {
         private readonly ITripPackageRepository _repo;
         private readonly TripCreationService _tripCreationService;
+        private readonly IBookingRepository _bookingRepository;
+        private Booking? _selectedBooking;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
+        public ObservableCollection<Booking> PendingBookings { get; set; }
 
         public ICollectionView TripsView { get; }
         public int TotalPackagesCount => Trips.Count;
@@ -101,6 +105,9 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand UpdateCommand { get;  }
         public ICommand DeleteCommand { get; }
 
+        public ICommand ApproveBookingCommand { get; set; }
+        public ICommand RejectBookingCommand { get; set; }
+        public ICommand RefreshPendingBookingsCommand { get; set; }
         public AgentViewModel()
             : this(new EfTripPackageRepository(), new TripCreationService())
         {
@@ -125,6 +132,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             using (var db = TravelAgencyDbContextFactory.Create())
                 db.Database.Migrate();
 
+            _bookingRepository = new EfBookingRepository();
+
+            PendingBookings = new ObservableCollection<Booking>();
+
+            ApproveBookingCommand = new RelayCommand(ApproveSelectedBooking);
+            RejectBookingCommand = new RelayCommand(RejectSelectedBooking);
+            RefreshPendingBookingsCommand = new RelayCommand(LoadPendingBookings);
+
+            LoadPendingBookings();
             LoadTrips();
         }
 
@@ -372,6 +388,75 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 !string.IsNullOrWhiteSpace(trip.TransportName) && trip.TransportName.ToLower().Contains(search) ||
                 !string.IsNullOrWhiteSpace(trip.StayName) && trip.StayName.ToLower().Contains(search) ||
                 trip.Season != null && !string.IsNullOrWhiteSpace(trip.Season.Name) && trip.Season.Name.ToLower().Contains(search);
+        }
+
+        public Booking? SelectedBooking
+        {
+            get => _selectedBooking;
+            set
+            {
+                if (_selectedBooking != value)
+                {
+                    _selectedBooking = value;
+                    OnPropertyChanged(nameof(SelectedBooking));
+                }
+            }
+        }
+
+        private void LoadPendingBookings()
+        {
+            PendingBookings.Clear();
+
+            var bookings = _bookingRepository.GetPending();
+
+            foreach (var booking in bookings)
+            {
+                PendingBookings.Add(booking);
+            }
+        }
+
+        private void ApproveSelectedBooking()
+        {
+            if (SelectedBooking == null)
+            {
+                MessageBox.Show("Please select a booking request first.",
+                                "Approve Booking",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                return;
+            }
+
+            SelectedBooking.ConfirmBooking();
+            _bookingRepository.Update(SelectedBooking);
+
+            LoadPendingBookings();
+
+            MessageBox.Show("Booking request approved successfully.",
+                            "Approve Booking",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+        }
+
+        private void RejectSelectedBooking()
+        {
+            if (SelectedBooking == null)
+            {
+                MessageBox.Show("Please select a booking request first.",
+                                "Reject Booking",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                return;
+            }
+
+            SelectedBooking.RejectBooking();
+            _bookingRepository.Update(SelectedBooking);
+
+            LoadPendingBookings();
+
+            MessageBox.Show("Booking request rejected successfully.",
+                            "Reject Booking",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
         }
     }
 }

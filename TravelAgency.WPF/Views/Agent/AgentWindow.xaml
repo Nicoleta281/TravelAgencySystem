@@ -65,8 +65,13 @@
                 <!-- Navigation -->
                 <StackPanel Grid.Row="1" Margin="20,10,20,20">
                     <Button Content="Dashboard" Style="{StaticResource SidebarButtonStyle}" Background="#2F80ED"/>
-                    <Button Content="Packages" Style="{StaticResource SidebarButtonStyle}"/>
-                    <Button Content="Bookings" Style="{StaticResource SidebarButtonStyle}"/>
+                    <Button Content="Packages"
+        Style="{StaticResource SidebarButtonStyle}"
+        Command="{Binding ShowPackagesCommand}"/>
+
+                    <Button Content="Bookings"
+        Style="{StaticResource SidebarButtonStyle}"
+        Command="{Binding ShowBookingsCommand}"/>
                     <Button Content="Clients" Style="{StaticResource SidebarButtonStyle}"/>
                     <Button Content="Reports" Style="{StaticResource SidebarButtonStyle}"/>
                 </StackPanel>
@@ -74,7 +79,9 @@
         </Border>
 
         <!-- Main Content -->
-        <Grid Grid.Column="1" Margin="24">
+        <Grid Grid.Column="1"
+      Margin="24"
+      Visibility="{Binding PackagesVisibility}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="120"/>
@@ -364,7 +371,132 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-              
+                        <Grid Grid.Column="1"
+      Margin="24"
+      Visibility="{Binding BookingsVisibility}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+            Background="White"
+            CornerRadius="16"
+            Padding="24"
+            Margin="0,0,0,18">
+                                <StackPanel>
+                                    <TextBlock Text="Booking Requests"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"/>
+                                    <TextBlock Text="Review and manage pending booking requests"
+                       FontSize="14"
+                       Foreground="#6B7280"
+                       Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="1"
+            Background="White"
+            CornerRadius="16"
+            Padding="20">
+                                <ListBox ItemsSource="{Binding PendingBookings}"
+                 SelectedItem="{Binding SelectedBooking}"
+                 BorderThickness="0"
+                 Background="Transparent">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,12"
+                            Padding="14"
+                            BorderBrush="#E5E7EB"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Background="#FAFBFF">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding TripPackage.Name}"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="#1F2937"/>
+
+                                                    <TextBlock Margin="0,6,0,0">
+                                <Run Text="Client: "/>
+                                <Run Text="{Binding Client.Username}"/>
+                                                    </TextBlock>
+
+                                                    <TextBlock Margin="0,4,0,0">
+                                <Run Text="Booked on: "/>
+                                <Run Text="{Binding BookingDate, StringFormat={}{0:dd MMM yyyy HH:mm}}"/>
+                                                    </TextBlock>
+
+                                                    <TextBlock Margin="0,4,0,0">
+                                <Run Text="Status: "/>
+                                <Run Text="{Binding Status.Name}"/>
+                                                    </TextBlock>
+
+                                                    <TextBlock Margin="0,4,0,0">
+                                <Run Text="Base Price: € "/>
+                                <Run Text="{Binding BasePrice, StringFormat={}{0:F2}}"/>
+                                                    </TextBlock>
+
+                                                    <TextBlock Margin="0,4,0,0">
+                                <Run Text="Total Price: € "/>
+                                <Run Text="{Binding TotalPrice, StringFormat={}{0:F2}}"/>
+                                                    </TextBlock>
+
+                                                    <ItemsControl ItemsSource="{Binding SelectedExtras}" Margin="0,8,0,0">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="#E5EDFF"
+                                                CornerRadius="8"
+                                                Padding="8,4"
+                                                Margin="0,0,0,6"
+                                                HorizontalAlignment="Left">
+                                                                    <TextBlock Text="{Binding}"
+                                                       Foreground="#2F5BD1"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"/>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+
+                            <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Margin="0,18,0,0">
+                                <Button Content="Refresh"
+                Width="110"
+                Height="40"
+                Margin="0,0,12,0"
+                Command="{Binding RefreshPendingBookingsCommand}"/>
+
+                                <Button Content="Approve"
+                Width="110"
+                Height="40"
+                Margin="0,0,12,0"
+                Background="#2F80ED"
+                Foreground="White"
+                BorderBrush="Transparent"
+                FontWeight="SemiBold"
+                Command="{Binding ApproveBookingCommand}"/>
+
+                                <Button Content="Reject"
+                Width="110"
+                Height="40"
+                Background="#E74C3C"
+                Foreground="White"
+                BorderBrush="Transparent"
+                FontWeight="SemiBold"
+                Command="{Binding RejectBookingCommand}"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
                 <!-- Right section -->

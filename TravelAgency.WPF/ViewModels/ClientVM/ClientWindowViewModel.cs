@@ -1,18 +1,19 @@
+using FluentValidation;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Decorator;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
-using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Validators;
-using FluentValidation;
 using TravelAgency.WPF.Commands;
 
-namespace TravelAgency.WPF.ViewModels.Client
+namespace TravelAgency.WPF.ViewModels.ClientVM
 {
     public class ClientWindowViewModel : INotifyPropertyChanged
     {
@@ -22,6 +23,8 @@ namespace TravelAgency.WPF.ViewModels.Client
         private string _searchText = "";
         private Visibility _packagesVisibility = Visibility.Visible;
         private Visibility _bookingsVisibility = Visibility.Collapsed;
+        private readonly IBookingRepository _bookingRepository;
+        private readonly string _currentClientUsername;
 
         public Visibility PackagesVisibility
         {
@@ -113,15 +116,19 @@ namespace TravelAgency.WPF.ViewModels.Client
 
         public ClientWindowViewModel()
         {
+            _bookingRepository = new EfBookingRepository();
+            _currentClientUsername = "client1";
+
             Packages = new ObservableCollection<TripPackage>();
             AvailableExtras = new ObservableCollection<OptionalExtra>();
             MyBookings = new ObservableCollection<Booking>();
+
             ShowBookingsCommand = new RelayCommand(ShowBookings);
             ShowPackagesCommand = new RelayCommand(ShowPackages);
-
             ConfirmBookingCommand = new RelayCommand(ConfirmBooking);
 
             LoadFromDatabaseOrSample();
+            LoadMyBookings();
         }
         private void ShowBookings()
         {
@@ -151,7 +158,7 @@ namespace TravelAgency.WPF.ViewModels.Client
             }
             catch
             {
-                // dacă apare o eroare la DB, vom cădea pe datele demo
+                
             }
 
             if (Packages.Count == 0)
@@ -289,30 +296,43 @@ namespace TravelAgency.WPF.ViewModels.Client
             }
 
             var finalPrice = decoratedTrip.GetPrice();
-            var finalDescription = decoratedTrip.GetDescription();
 
             var booking = new Booking
             {
-                BookingDate = DateTime.Now,
+                BookingDate = DateTime.UtcNow,
+                Client = new Client
+                {
+                    Username = _currentClientUsername
+                },
                 TripPackage = SelectedPackage,
                 SelectedExtras = selectedExtras,
                 BasePrice = SelectedPackage.Price,
-                TotalPrice = finalPrice,
-                Status = new BookingStatus { Name = "Confirmed" }
+                TotalPrice = finalPrice
             };
+
+            booking.SubmitRequest();
 
             try
             {
                 var validator = new BookingValidator();
                 validator.ValidateAndThrow(booking);
 
-                MyBookings.Add(booking);
+                _bookingRepository.Add(booking);
+                LoadMyBookings();
 
                 MessageBox.Show(
-                    $"Booking confirmed successfully!\n\nTrip: {finalDescription}\nTotal: € {finalPrice:F2}",
-                    "Booking",
+                    $"Request submitted successfully!\n\nTrip: {SelectedPackage.Name}\nTotal: € {finalPrice:F2}\nStatus: Pending",
+                    "Booking Request",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+
+                foreach (var extra in AvailableExtras)
+                {
+                    extra.IsSelected = false;
+                }
+
+                RecalculateTotalPrice();
+                ShowBookings();
             }
             catch (ValidationException ex)
             {
@@ -324,5 +344,16 @@ namespace TravelAgency.WPF.ViewModels.Client
             }
         }
 
+        private void LoadMyBookings()
+        {
+            MyBookings.Clear();
+
+            var bookings = _bookingRepository.GetByClientUsername(_currentClientUsername);
+
+            foreach (var booking in bookings)
+            {
+                MyBookings.Add(booking);
+            }
+        }
     }
 }

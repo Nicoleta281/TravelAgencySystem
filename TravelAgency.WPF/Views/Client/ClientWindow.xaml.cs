@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using TravelAgency.Core.Models.TripPkg.Package;
-using TravelAgency.WPF.ViewModels.Client;
+using TravelAgency.WPF.ViewModels.ClientVM;
 
 namespace TravelAgency.WPF.Views
 {

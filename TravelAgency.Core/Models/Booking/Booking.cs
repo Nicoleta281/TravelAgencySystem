@@ -15,7 +15,7 @@ namespace TravelAgency.Core.Models.Booking
 
         public TripPackage? TripPackage { get; set; }
 
-        public BookingStatus? Status { get; set; }
+        public BookingStatus? Status { get; private set; }
 
         public List<string> SelectedExtras { get; set; } = new();
 
@@ -23,9 +23,19 @@ namespace TravelAgency.Core.Models.Booking
 
         public double TotalPrice { get; set; }
 
+        public void SubmitRequest()
+        {
+            Status = new BookingStatus { Name = "Pending" };
+        }
+
         public void ConfirmBooking()
         {
             Status = new BookingStatus { Name = "Confirmed" };
+        }
+
+        public void RejectBooking()
+        {
+            Status = new BookingStatus { Name = "Rejected" };
         }
 
         public void CancelBooking()
