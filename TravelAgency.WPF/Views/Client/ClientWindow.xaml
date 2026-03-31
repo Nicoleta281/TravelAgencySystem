@@ -79,6 +79,11 @@
                             FontSize="15"
                             HorizontalContentAlignment="Left"
                             Padding="16,0,0,0"/>
+                    <Button Content="Logout"
+        Command="{Binding LogoutCommand}"
+        Background="#EF4444"
+        Foreground="White"
+        Margin="0,20,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>

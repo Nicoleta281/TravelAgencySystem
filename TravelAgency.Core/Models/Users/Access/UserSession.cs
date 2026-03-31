@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using TravelAgency.Core.Models.Users;
 
 namespace TravelAgency.Core.Models.Users.Access
 {
@@ -10,8 +7,22 @@ namespace TravelAgency.Core.Models.Users.Access
     {
         public DateTime DateLogin { get; set; }
         public bool IsActive { get; set; }
+        public User? CurrentUser { get; set; }
+        public ISessionState State { get; set; }
 
-        public void StartSession() { }
-        public void EndSession() { }
+        public UserSession()
+        {
+            State = new LoggedOutState();
+        }
+
+        public void StartSession(User user)
+        {
+            State.Login(this, user);
+        }
+
+        public void EndSession()
+        {
+            State.Logout(this);
+        }
     }
 }

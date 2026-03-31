@@ -10,8 +10,10 @@ using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.Users;
+using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Commands;
+using TravelAgency.WPF.Views;
 
 namespace TravelAgency.WPF.ViewModels.ClientVM
 {
@@ -60,6 +62,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         public ObservableCollection<Booking> MyBookings { get; set; }
 
         public ICommand ConfirmBookingCommand { get; set; }
+        public ICommand LogoutCommand { get; }
 
         public string SearchText
         {
@@ -117,7 +120,17 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         public ClientWindowViewModel()
         {
             _bookingRepository = new EfBookingRepository();
-            _currentClientUsername = "client1";
+            _currentClientUsername = SessionManager.Instance.CurrentSession.CurrentUser?.Username ?? "";
+            if (SessionManager.Instance.CurrentSession.CurrentUser == null)
+            {
+                throw new InvalidOperationException("User not authenticated.");
+            }
+
+
+            if (string.IsNullOrWhiteSpace(_currentClientUsername))
+            {
+                throw new InvalidOperationException("No authenticated client session found.");
+            }
 
             Packages = new ObservableCollection<TripPackage>();
             AvailableExtras = new ObservableCollection<OptionalExtra>();
@@ -126,6 +139,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             ShowBookingsCommand = new RelayCommand(ShowBookings);
             ShowPackagesCommand = new RelayCommand(ShowPackages);
             ConfirmBookingCommand = new RelayCommand(ConfirmBooking);
+            LogoutCommand = new RelayCommand(Logout);
 
             LoadFromDatabaseOrSample();
             LoadMyBookings();
@@ -354,6 +368,20 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             {
                 MyBookings.Add(booking);
             }
+        }
+
+        private void Logout()
+        {
+            var currentWindow = Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w.IsActive);
+
+            SessionManager.Instance.CurrentSession.EndSession();
+
+            var loginWindow = new LoginWindow();
+            loginWindow.Show();
+
+            currentWindow?.Close();
         }
     }
 }

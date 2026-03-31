@@ -8,6 +8,8 @@ namespace TravelAgency.Core.Data
         public DbSet<TripPackageEntity> TripPackages => Set<TripPackageEntity>();
         public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
 
+        public DbSet<UserEntity> Users => Set<UserEntity>();
+
         public TravelAgencyDbContext(DbContextOptions<TravelAgencyDbContext> options)
             : base(options) { }
 
@@ -33,6 +35,18 @@ namespace TravelAgency.Core.Data
                 e.Property(x => x.ClientUsername).IsRequired();
                 e.Property(x => x.StatusName).IsRequired();
                 e.Property(x => x.SelectedExtras).IsRequired();
+            });
+
+            modelBuilder.Entity<UserEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedOnAdd();
+
+                e.Property(x => x.Username).IsRequired();
+                e.Property(x => x.PasswordHash).IsRequired();
+                e.Property(x => x.RoleName).IsRequired();
+
+                e.HasIndex(x => x.Username).IsUnique();
             });
         }
     }

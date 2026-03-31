@@ -5,6 +5,7 @@ using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.TripPkg.Services;
 using FluentValidation;
+using TravelAgency.Core.Validators;
 
 namespace TravelAgency.Core.Services
 {

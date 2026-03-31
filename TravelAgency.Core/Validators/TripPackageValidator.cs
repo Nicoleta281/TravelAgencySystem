@@ -2,7 +2,7 @@
 using FluentValidation.Validators;
 using TravelAgency.Core.Models.TripPkg.Package;
 
-namespace TravelAgency.Core
+namespace TravelAgency.Core.Validators
 { 
     public class TripPackageValidator : AbstractValidator<TripPackage>
 {

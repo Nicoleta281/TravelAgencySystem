@@ -74,6 +74,12 @@
         Command="{Binding ShowBookingsCommand}"/>
                     <Button Content="Clients" Style="{StaticResource SidebarButtonStyle}"/>
                     <Button Content="Reports" Style="{StaticResource SidebarButtonStyle}"/>
+
+                    <Button Content="Logout"
+        Command="{Binding LogoutCommand}"
+        Background="#EF4444"
+        Foreground="White"
+        Margin="0,20,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>

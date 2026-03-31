@@ -108,10 +108,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand ApproveBookingCommand { get; set; }
         public ICommand RejectBookingCommand { get; set; }
         public ICommand RefreshPendingBookingsCommand { get; set; }
+        public ICommand LogoutCommand { get; }
         public AgentViewModel()
             : this(new EfTripPackageRepository(), new TripCreationService())
         {
         }
+
+
 
         public AgentViewModel(ITripPackageRepository repo, TripCreationService tripCreationService)
         {
@@ -128,6 +131,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             UpdateCommand = new RelayCommand(UpdateSelected, () => SelectedTrip != null);
             DeleteCommand = new RelayCommand(DeleteSelected, () => SelectedTrip != null);
 
+            LogoutCommand = new RelayCommand(Logout);
+
             Trips.CollectionChanged += (_, __) => RefreshStats();
             using (var db = TravelAgencyDbContextFactory.Create())
                 db.Database.Migrate();
@@ -143,7 +148,6 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             LoadPendingBookings();
             LoadTrips();
         }
-
         private void LoadTrips()
         {
             Trips.Clear();
@@ -457,6 +461,21 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                             "Reject Booking",
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
+        }
+
+
+        private void Logout()
+        {
+            var currentWindow = Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w.IsActive);
+
+            SessionManager.Instance.CurrentSession.EndSession();
+
+            var loginWindow = new LoginWindow();
+            loginWindow.Show();
+
+            currentWindow?.Close();
         }
     }
 }
