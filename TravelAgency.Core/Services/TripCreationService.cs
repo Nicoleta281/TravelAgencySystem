@@ -4,6 +4,7 @@ using TravelAgency.Core.Factories.AbstractFactory;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.TripPkg.Services;
+using FluentValidation;
 
 namespace TravelAgency.Core.Services
 {
@@ -89,6 +90,16 @@ namespace TravelAgency.Core.Services
             // minim o zi
             if (trip.Days.Count == 0)
                 trip.AddDay(new TripDay());
+
+            // ===== FluentValidation pe TripPackage =====
+            var validator = new TripPackageValidator();
+            var result = validator.Validate(trip);
+
+            if (!result.IsValid)
+            {
+                var message = string.Join(Environment.NewLine, result.Errors.Select(e => e.ErrorMessage));
+                throw new ValidationException(message);
+            }
 
             return trip;
         }

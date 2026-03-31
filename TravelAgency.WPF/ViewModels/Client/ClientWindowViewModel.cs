@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -7,6 +7,9 @@ using TravelAgency.Core.Decorator;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Validators;
+using FluentValidation;
 using TravelAgency.WPF.Commands;
 
 namespace TravelAgency.WPF.ViewModels.Client
@@ -118,7 +121,7 @@ namespace TravelAgency.WPF.ViewModels.Client
 
             ConfirmBookingCommand = new RelayCommand(ConfirmBooking);
 
-            LoadSampleData();
+            LoadFromDatabaseOrSample();
         }
         private void ShowBookings()
         {
@@ -132,52 +135,76 @@ namespace TravelAgency.WPF.ViewModels.Client
             BookingsVisibility = Visibility.Collapsed;
         }
 
-        private void LoadSampleData()
+        private void LoadFromDatabaseOrSample()
         {
-            Packages.Add(new TripPackage
-            {
-                Id = 1,
-                Name = "Paris City Break",
-                Price = 499,
-                TransportDisplayName = "Plane",
-                StayDisplayName = "Hotel",
-                ShortDescription = "A relaxing city break in Paris.",
-                Destination = "Paris",
-                Country = "France"
-            });
+            Packages.Clear();
 
-            Packages.Add(new TripPackage
+            try
             {
-                Id = 2,
-                Name = "Venice Weekend",
-                Price = 249,
-                TransportDisplayName = "Bus",
-                StayDisplayName = "Hostel",
-                ShortDescription = "A short and charming Venice trip.",
-                Destination = "Venice",
-                Country = "Italy"
-            });
+                var repo = new EfTripPackageRepository();
+                var trips = repo.GetAll();
 
-            Packages.Add(new TripPackage
+                foreach (var trip in trips)
+                {
+                    Packages.Add(trip);
+                }
+            }
+            catch
             {
-                Id = 3,
-                Name = "Swiss Alps Adventure",
-                Price = 799,
-                TransportDisplayName = "Plane",
-                StayDisplayName = "Hotel",
-                ShortDescription = "An unforgettable alpine adventure.",
-                Destination = "Zermatt",
-                Country = "Switzerland"
-            });
+                // dacă apare o eroare la DB, vom cădea pe datele demo
+            }
 
-            AvailableExtras.Add(new OptionalExtra { Name = "Airport Transfer", Price = 30 });
-            AvailableExtras.Add(new OptionalExtra { Name = "Insurance", Price = 20 });
-            AvailableExtras.Add(new OptionalExtra { Name = "Free Cancellation", Price = 25 });
-            AvailableExtras.Add(new OptionalExtra { Name = "Guided Tour", Price = 40 });
-
-            foreach (var extra in AvailableExtras)
+            if (Packages.Count == 0)
             {
-                extra.PropertyChanged += Extra_PropertyChanged;
+                // fallback: date demo, ca înainte
+                Packages.Add(new TripPackage
+                {
+                    Id = 1,
+                    Name = "Paris City Break",
+                    Price = 499,
+                    TransportDisplayName = "Plane",
+                    StayDisplayName = "Hotel",
+                    ShortDescription = "A relaxing city break in Paris.",
+                    Destination = "Paris",
+                    Country = "France"
+                });
+
+                Packages.Add(new TripPackage
+                {
+                    Id = 2,
+                    Name = "Venice Weekend",
+                    Price = 249,
+                    TransportDisplayName = "Bus",
+                    StayDisplayName = "Hostel",
+                    ShortDescription = "A short and charming Venice trip.",
+                    Destination = "Venice",
+                    Country = "Italy"
+                });
+
+                Packages.Add(new TripPackage
+                {
+                    Id = 3,
+                    Name = "Swiss Alps Adventure",
+                    Price = 799,
+                    TransportDisplayName = "Plane",
+                    StayDisplayName = "Hotel",
+                    ShortDescription = "An unforgettable alpine adventure.",
+                    Destination = "Zermatt",
+                    Country = "Switzerland"
+                });
+            }
+
+            if (AvailableExtras.Count == 0)
+            {
+                AvailableExtras.Add(new OptionalExtra { Name = "Airport Transfer", Price = 30 });
+                AvailableExtras.Add(new OptionalExtra { Name = "Insurance", Price = 20 });
+                AvailableExtras.Add(new OptionalExtra { Name = "Free Cancellation", Price = 25 });
+                AvailableExtras.Add(new OptionalExtra { Name = "Guided Tour", Price = 40 });
+
+                foreach (var extra in AvailableExtras)
+                {
+                    extra.PropertyChanged += Extra_PropertyChanged;
+                }
             }
 
             SelectedPackage = Packages.FirstOrDefault();
@@ -274,13 +301,27 @@ namespace TravelAgency.WPF.ViewModels.Client
                 Status = new BookingStatus { Name = "Confirmed" }
             };
 
-            MyBookings.Add(booking);
+            try
+            {
+                var validator = new BookingValidator();
+                validator.ValidateAndThrow(booking);
 
-            MessageBox.Show(
-                $"Booking confirmed successfully!\n\nTrip: {finalDescription}\nTotal: € {finalPrice:F2}",
-                "Booking",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                MyBookings.Add(booking);
+
+                MessageBox.Show(
+                    $"Booking confirmed successfully!\n\nTrip: {finalDescription}\nTotal: € {finalPrice:F2}",
+                    "Booking",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (ValidationException ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Booking validation error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
     }

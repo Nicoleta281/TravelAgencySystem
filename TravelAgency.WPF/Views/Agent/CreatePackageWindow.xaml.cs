@@ -17,6 +17,8 @@ using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Patterns.Composite;
 using TravelAgency.Core.Services;
+using TravelAgency.Core.Validators;
+using FluentValidation;
 using System.Threading;
 using System.Windows.Input;
 namespace TravelAgency.WPF.Views
@@ -177,6 +179,11 @@ namespace TravelAgency.WPF.Views
                 try
                 {
                     var request = BuildTripRequestFromForm();
+
+                    // FluentValidation pe TripRequest (input din wizard)
+                    var validator = new TripRequestValidator();
+                    validator.ValidateAndThrow(request);
+
                     TripPackage trip;
 
                     if (_editingTrip != null)
@@ -845,10 +852,10 @@ namespace TravelAgency.WPF.Views
                 compositePrice += 20;
 
             if (TourGuideCheckBox.IsChecked == true)
-                compositePrice += 25;
+                compositePrice += 40;
 
             if (FreeCancellationCheckBox.IsChecked == true)
-                compositePrice += 15;
+                compositePrice += 25;
 
             // ===== calcul final =====
             decimal finalPrice = _facade.CalculateFinalPrice(
@@ -876,10 +883,10 @@ namespace TravelAgency.WPF.Views
                 compositePrice += 20;
 
             if (TourGuideCheckBox.IsChecked == true)
-                compositePrice += 25;
+                compositePrice += 40;
 
             if (FreeCancellationCheckBox.IsChecked == true)
-                compositePrice += 15;
+                compositePrice += 25;
 
             return compositePrice;
         }

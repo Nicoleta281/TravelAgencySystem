@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using TravelAgency.Core.Data.Mappers;
@@ -18,8 +18,13 @@ namespace TravelAgency.Core.Data.Repositories
         public TripPackage Add(TripPackage trip)
         {
             using var db = TravelAgencyDbContextFactory.Create();
-            db.TripPackages.Add(TripPackageMapper.ToEntity(trip));
+            var entity = TripPackageMapper.ToEntity(trip);
+            db.TripPackages.Add(entity);
             db.SaveChanges();
+
+            // propagate generated database Id back to domain model
+            trip.Id = entity.Id;
+
             return trip;
         }
 
