@@ -1,9 +1,8 @@
-using System;
-using System.Linq;
 using System.Windows;
 using TravelAgency.Core.Adapters.SerpApi;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Models.Locations;
+using TravelAgency.WPF.ViewModels.AgentVM;
 
 namespace TravelAgency.WPF.Views
 {
@@ -12,7 +11,7 @@ namespace TravelAgency.WPF.Views
         public AgentWindow()
         {
             InitializeComponent();
-            DataContext = new TravelAgency.WPF.ViewModels.AgentViewModel();
+            DataContext = new TravelAgency.WPF.ViewModels.AgentVM.AgentViewModel();
         }
 
         private void CreatePackage_Click(object sender, RoutedEventArgs e)
@@ -20,7 +19,7 @@ namespace TravelAgency.WPF.Views
             var window = new CreatePackageWindow();
             var result = window.ShowDialog();
 
-            if (result == true && DataContext is TravelAgency.WPF.ViewModels.AgentViewModel vm)
+            if (result == true && DataContext is AgentViewModel vm)
             {
                 vm.ReloadCommand.Execute(null);
             }
@@ -28,7 +27,7 @@ namespace TravelAgency.WPF.Views
 
         private void EditPackage_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not TravelAgency.WPF.ViewModels.AgentViewModel vm || vm.SelectedTrip == null)
+            if (DataContext is not AgentViewModel vm || vm.SelectedTrip == null)
                 return;
 
             var window = new CreatePackageWindow(vm.SelectedTrip);

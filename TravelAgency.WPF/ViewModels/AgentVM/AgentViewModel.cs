@@ -14,7 +14,7 @@ using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
 
-namespace TravelAgency.WPF.ViewModels
+namespace TravelAgency.WPF.ViewModels.AgentVM
 {
     public class AgentViewModel : ViewModelBase
     {
@@ -231,8 +231,8 @@ namespace TravelAgency.WPF.ViewModels
                     FinalPrice = price
                 };
 
-                var builder = new TravelAgency.Core.Builders.TripPackageBuilder();
-                var director = new TravelAgency.Core.Builders.TripDirector(builder);
+                var builder = new Core.Builders.TripPackageBuilder();
+                var director = new Core.Builders.TripDirector(builder);
 
                 var trip = director.Make(request);
 
@@ -368,10 +368,10 @@ namespace TravelAgency.WPF.ViewModels
             string search = SearchText.Trim().ToLower();
 
             return
-                (!string.IsNullOrWhiteSpace(trip.Name) && trip.Name.ToLower().Contains(search)) ||
-                (!string.IsNullOrWhiteSpace(trip.TransportName) && trip.TransportName.ToLower().Contains(search)) ||
-                (!string.IsNullOrWhiteSpace(trip.StayName) && trip.StayName.ToLower().Contains(search)) ||
-                (trip.Season != null && !string.IsNullOrWhiteSpace(trip.Season.Name) && trip.Season.Name.ToLower().Contains(search));
+                !string.IsNullOrWhiteSpace(trip.Name) && trip.Name.ToLower().Contains(search) ||
+                !string.IsNullOrWhiteSpace(trip.TransportName) && trip.TransportName.ToLower().Contains(search) ||
+                !string.IsNullOrWhiteSpace(trip.StayName) && trip.StayName.ToLower().Contains(search) ||
+                trip.Season != null && !string.IsNullOrWhiteSpace(trip.Season.Name) && trip.Season.Name.ToLower().Contains(search);
         }
     }
 }
