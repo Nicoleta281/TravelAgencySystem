@@ -256,7 +256,7 @@
                                                FontSize="13"
                                                Foreground="#6B7280">
                                         <Run Text="Destination: "/>
-                                        <Run Text="{Binding Destination}"/>
+                                        <Run Text="{Binding Destination, Mode=OneWay}"/>
                                                     </TextBlock>
 
                                                     <TextBlock Text="{Binding Price, StringFormat=€ {0:F2}}"
@@ -387,27 +387,27 @@
 
                             <TextBlock Margin="0,3,0,0" FontSize="14" Foreground="#374151">
                                 <Run Text="Transport: "/>
-                                <Run Text="{Binding SelectedPackage.TransportDisplayName}"/>
+                                <Run Text="{Binding SelectedPackage.TransportDisplayName, Mode=OneWay}"/>
                             </TextBlock>
 
                             <TextBlock Margin="0,3,0,0" FontSize="14" Foreground="#374151">
                                 <Run Text="Stay: "/>
-                                <Run Text="{Binding SelectedPackage.StayDisplayName}"/>
+                                <Run Text="{Binding SelectedPackage.StayDisplayName, Mode=OneWay}"/>
                             </TextBlock>
 
                             <TextBlock Margin="0,3,0,0" FontSize="14" Foreground="#374151">
                                 <Run Text="Destination: "/>
-                                <Run Text="{Binding SelectedPackage.Destination}"/>
+                                <Run Text="{Binding SelectedPackage.Destination, Mode=OneWay}"/>
                             </TextBlock>
 
                             <TextBlock Margin="0,3,0,0" FontSize="14" Foreground="#374151">
                                 <Run Text="Country: "/>
-                                <Run Text="{Binding SelectedPackage.Country}"/>
+                                <Run Text="{Binding SelectedPackage.Country, Mode=OneWay}"/>
                             </TextBlock>
 
                             <TextBlock Margin="0,3,0,16" FontSize="14" Foreground="#374151" TextWrapping="Wrap">
                                 <Run Text="Description: "/>
-                                <Run Text="{Binding SelectedPackage.ShortDescription}"/>
+                                <Run Text="{Binding SelectedPackage.ShortDescription, Mode=OneWay}"/>
                             </TextBlock>
 
                             <!-- Extras -->

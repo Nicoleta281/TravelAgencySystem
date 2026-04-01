@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TravelAgency.Core.Prototypes;
 using System.Linq;
+using TravelAgency.Core.Patterns.Prototypes;
 
 namespace TravelAgency.Core.Models.TripPkg.Package
 {

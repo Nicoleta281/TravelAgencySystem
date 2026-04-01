@@ -218,298 +218,287 @@
             <!-- Main Area -->
             <Grid Grid.Row="2" Grid.ColumnSpan="3">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="197*"/>
+                    <ColumnDefinition Width="0"/>
+                    <ColumnDefinition Width="86*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Left section -->
-                <Border Grid.Column="0"
-        Background="White"
-        CornerRadius="16"
-        Padding="20">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                <Grid Margin="0,20,0,0" HorizontalAlignment="Left" Width="777">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="125*"/>
+                        <ColumnDefinition Width="134*"/>
+                        <ColumnDefinition Width="0*"/>
+                    </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Row="0"
-                   Text="Recent Packages"
-                   FontSize="22"
-                   FontWeight="Bold"
-                   Foreground="#1F2937"
-                   Margin="0,0,0,16"/>
+                    <!-- LEFT: RECENT PACKAGES -->
+                    <Border
+            Background="White"
+            CornerRadius="16"
+            Padding="20" HorizontalAlignment="Center" Width="375">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="246*"/>
+                                <ColumnDefinition Width="49*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                        <ListBox Grid.Row="1"
-                 ItemsSource="{Binding TripsView}"
-                 SelectedItem="{Binding SelectedTrip, Mode=TwoWay}"
-                 BorderThickness="0"
-                 Background="Transparent"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 HorizontalContentAlignment="Stretch"
-     
-                                 >
+                            <TextBlock Text="Recent Packages"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"
+                       Margin="0,0,0,16" Grid.ColumnSpan="2"/>
 
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
+                            <ListBox
+                     ItemsSource="{Binding TripsView}"
+                     SelectedItem="{Binding SelectedTrip, Mode=TwoWay}"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     HorizontalContentAlignment="Stretch" Grid.ColumnSpan="2" Margin="0,45,0,0" Grid.RowSpan="2">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
 
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="Padding" Value="0"/>
-                                    <Setter Property="Margin" Value="0,0,12,12"/>
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border x:Name="OuterBorder"
-                                        Background="Transparent"
-                                        CornerRadius="14">
-                                                    <ContentPresenter/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsSelected" Value="True">
-                                                        <Setter TargetName="OuterBorder" Property="Background" Value="#EAF2FF"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,0,12,12"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="OuterBorder"
+                                            Background="Transparent"
+                                            CornerRadius="14">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="OuterBorder" Property="Background" Value="#EAF2FF"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
 
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Width="200"
-                            Background="#FAFBFF"
-                            CornerRadius="14"
-                            BorderBrush="#E5E7EB"
-                            BorderThickness="1">
-                                        <StackPanel>
-                                            <Border Height="95"
-                                    Background="#DCEBFA"
-                                    CornerRadius="14,14,0,0">
-                                                <Grid>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="210"
+                                Background="#FAFBFF"
+                                CornerRadius="14"
+                                BorderBrush="#E5E7EB"
+                                BorderThickness="1">
+                                            <StackPanel>
+                                                <Border Height="95"
+                                        Background="#DCEBFA"
+                                        CornerRadius="14,14,0,0"/>
+
+                                                <StackPanel Margin="12">
                                                     <TextBlock Text="{Binding Name}"
                                                FontSize="16"
                                                FontWeight="Bold"
-                                               Foreground="#1F3A5F"
-                                               TextWrapping="Wrap"
-                                               TextAlignment="Center"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Margin="10"/>
-                                                </Grid>
-                                            </Border>
+                                               Foreground="#1F2937"
+                                               TextWrapping="Wrap"/>
 
-                                            <StackPanel Margin="12">
-                                                <TextBlock Text="{Binding Name}"
-                                           FontSize="16"
-                                           FontWeight="Bold"
-                                           Foreground="#1F2937"
-                                           TextWrapping="Wrap"/>
-
-                                                <TextBlock Margin="0,4,0,3"
-                                           FontSize="12"
-                                           Foreground="#6B7280">
-                                    <Run Text="{Binding TransportName, Mode=OneWay}"/>
-                                    <Run Text=" + "/>
-                                    <Run Text="{Binding StayName, Mode=OneWay}"/>
-                                                </TextBlock>
-
-                                                <TextBlock Margin="0,0,0,8"
-                                           FontSize="12"
-                                           Foreground="#6B7280">
-                                    <Run Text="Days: "/>
-                                    <Run Text="{Binding DaysCount, Mode=OneWay}"/>
-                                                </TextBlock>
-
-                                                <Border Background="#E5EDFF"
-                                        CornerRadius="8"
-                                        Padding="6,3"
-                                        HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding Season.Name, TargetNullValue=Trip}"
-                                               Foreground="#2F5BD1"
+                                                    <TextBlock Text="{Binding TransportName, StringFormat=Transport: {0}}"
+                                               Margin="0,4,0,2"
                                                FontSize="12"
-                                               FontWeight="SemiBold"/>
-                                                </Border>
+                                               Foreground="#6B7280"/>
 
-                                                <TextBlock Text="{Binding Price, StringFormat=€ {0:F2}}"
-                                           FontSize="18"
-                                           FontWeight="Bold"
-                                           Foreground="#1F2937"
-                                           Margin="0,14,0,12"/>
+                                                    <TextBlock Text="{Binding StayName, StringFormat=Stay: {0}}"
+                                               Margin="0,0,0,6"
+                                               FontSize="12"
+                                               Foreground="#6B7280"/>
 
-                                                <Button Content="View Details"
-                                        Height="32"
-                                        Background="#2F80ED"
-                                        Foreground="White"
-                                        BorderBrush="Transparent"
-                                        FontWeight="SemiBold"
-                                        IsHitTestVisible="False"/>
+                                                    <TextBlock Text="{Binding Price, StringFormat=€ {0:F2}}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               Foreground="#1F2937"
+                                               Margin="0,8,0,0"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <TextBlock Grid.Row="1"
-                   Text="No packages found"
-                   FontSize="16"
-                   FontWeight="SemiBold"
-                   Foreground="#9CA3AF"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding TripsView.IsEmpty}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <Grid Grid.Column="1"
-      Margin="24"
-      Visibility="{Binding BookingsVisibility}">
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+
+                    <!-- MIDDLE: BOOKING REQUESTS -->
+                    <Border Grid.Column="1"
+            Background="White"
+            CornerRadius="16"
+            Padding="20"
+            Margin="10,0,4,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="122*"/>
+                                <ColumnDefinition Width="137*"/>
+                            </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="41.62"/>
+                                <RowDefinition Height="28.263"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0"
-            Background="White"
-            CornerRadius="16"
-            Padding="24"
-            Margin="0,0,0,18">
-                                <StackPanel>
-                                    <TextBlock Text="Booking Requests"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       Foreground="#1F2937"/>
-                                    <TextBlock Text="Review and manage pending booking requests"
-                       FontSize="14"
-                       Foreground="#6B7280"
-                       Margin="0,6,0,0"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Row="1"
-            Background="White"
-            CornerRadius="16"
-            Padding="20">
-                                <ListBox ItemsSource="{Binding PendingBookings}"
-                 SelectedItem="{Binding SelectedBooking}"
-                 BorderThickness="0"
-                 Background="Transparent">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Margin="0,0,0,12"
-                            Padding="14"
-                            BorderBrush="#E5E7EB"
-                            BorderThickness="1"
-                            CornerRadius="12"
-                            Background="#FAFBFF">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding TripPackage.Name}"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#1F2937"/>
-
-                                                    <TextBlock Margin="0,6,0,0">
-                                <Run Text="Client: "/>
-                                <Run Text="{Binding Client.Username}"/>
-                                                    </TextBlock>
-
-                                                    <TextBlock Margin="0,4,0,0">
-                                <Run Text="Booked on: "/>
-                                <Run Text="{Binding BookingDate, StringFormat={}{0:dd MMM yyyy HH:mm}}"/>
-                                                    </TextBlock>
-
-                                                    <TextBlock Margin="0,4,0,0">
-                                <Run Text="Status: "/>
-                                <Run Text="{Binding Status.Name}"/>
-                                                    </TextBlock>
-
-                                                    <TextBlock Margin="0,4,0,0">
-                                <Run Text="Base Price: € "/>
-                                <Run Text="{Binding BasePrice, StringFormat={}{0:F2}}"/>
-                                                    </TextBlock>
-
-                                                    <TextBlock Margin="0,4,0,0">
-                                <Run Text="Total Price: € "/>
-                                <Run Text="{Binding TotalPrice, StringFormat={}{0:F2}}"/>
-                                                    </TextBlock>
-
-                                                    <ItemsControl ItemsSource="{Binding SelectedExtras}" Margin="0,8,0,0">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <Border Background="#E5EDFF"
-                                                CornerRadius="8"
-                                                Padding="8,4"
-                                                Margin="0,0,0,6"
-                                                HorizontalAlignment="Left">
-                                                                    <TextBlock Text="{Binding}"
-                                                       Foreground="#2F5BD1"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"/>
-                                                                </Border>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </Border>
-
-                            <StackPanel Grid.Row="2"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right"
-                Margin="0,18,0,0">
-                                <Button Content="Refresh"
-                Width="110"
-                Height="40"
-                Margin="0,0,12,0"
-                Command="{Binding RefreshPendingBookingsCommand}"/>
-
-                                <Button Content="Approve"
-                Width="110"
-                Height="40"
-                Margin="0,0,12,0"
-                Background="#2F80ED"
-                Foreground="White"
-                BorderBrush="Transparent"
-                FontWeight="SemiBold"
-                Command="{Binding ApproveBookingCommand}"/>
-
-                                <Button Content="Reject"
-                Width="110"
-                Height="40"
-                Background="#E74C3C"
-                Foreground="White"
-                BorderBrush="Transparent"
-                FontWeight="SemiBold"
-                Command="{Binding RejectBookingCommand}"/>
+                            <StackPanel Margin="0,0,0,16" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                                <TextBlock Text="Booking Requests"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           Foreground="#1F2937"/>
+                                <TextBlock Text="Review and manage pending bookings"
+                           FontSize="14"
+                           Foreground="#6B7280"
+                           Margin="0,6,0,0"/>
                             </StackPanel>
+
+                            <ListBox Grid.Row="2"
+                     ItemsSource="{Binding PendingBookings}"
+                     SelectedItem="{Binding SelectedBooking, Mode=TwoWay}"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     HorizontalContentAlignment="Stretch" Margin="0,0,0,58" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,0,0,12"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="OuterBorder"
+                                            Background="Transparent"
+                                            CornerRadius="12">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="OuterBorder" Property="Background" Value="#EAF2FF"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="14"
+                                BorderBrush="#E5E7EB"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Background="#FAFBFF">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding TripPackage.Name}"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           Foreground="#1F2937"/>
+
+                                                <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding Client.Username, StringFormat=Client: {0}}"
+                                           Foreground="#374151"/>
+
+                                                <TextBlock Margin="0,4,0,0"
+                                           Text="{Binding BookingDate, StringFormat=Booked on: {0:dd MMM yyyy HH:mm}}"
+                                           Foreground="#374151"/>
+
+                                                <TextBlock Margin="0,4,0,0"
+                                           Text="{Binding Status.Name, StringFormat=Status: {0}}"
+                                           Foreground="#374151"/>
+
+                                                <TextBlock Margin="0,4,0,0"
+                                           Text="{Binding TotalPrice, StringFormat=Total Price: € {0:F2}}"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1F2937"/>
+
+                                                <ItemsControl ItemsSource="{Binding SelectedExtras}"
+                                              Margin="0,10,0,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#E5EDFF"
+                                                    CornerRadius="8"
+                                                    Padding="8,4"
+                                                    Margin="0,0,8,8"
+                                                    HorizontalAlignment="Left">
+                                                                <TextBlock Text="{Binding}"
+                                                           Foreground="#2F5BD1"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Grid Grid.Row="3" Margin="0,16,0,0" Grid.ColumnSpan="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+                        Content="Refresh"
+                        Height="42"
+                        Background="#F3F4F6"
+                        Foreground="#1F2937"
+                        BorderBrush="#D1D5DB"
+                        FontWeight="SemiBold"
+                        Command="{Binding RefreshPendingBookingsCommand}"/>
+
+                                <Button Grid.Column="2"
+                        Content="Approve"
+                        Height="42"
+                        Background="#2F80ED"
+                        Foreground="White"
+                        BorderBrush="Transparent"
+                        FontWeight="SemiBold"
+                        Command="{Binding ApproveBookingCommand}"/>
+
+                                <Button Grid.Column="4"
+                        Content="Reject"
+                        Height="42"
+                        Background="#E74C3C"
+                        Foreground="White"
+                        BorderBrush="Transparent"
+                        FontWeight="SemiBold"
+                        Command="{Binding RejectBookingCommand}"/>
+                            </Grid>
                         </Grid>
-                    </Grid>
-                </Border>
+                    </Border>
+                </Grid>
                 <!-- Right section -->
                 <Border Grid.Column="2"
         Background="White"
         CornerRadius="16"
-        Padding="20">
+        Padding="20" HorizontalAlignment="Left" Width="345" Margin="10,0,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <Border Background="#F8FAFC"
@@ -517,7 +506,7 @@
         BorderThickness="1"
         CornerRadius="14"
         Padding="24"
-        Margin="0,0,0,16">
+        Margin="0,0,0,16" Height="104" Width="284">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -560,12 +549,12 @@
 
 
                                 <!-- Top banner -->
-                            <Border Height="170"
+                                <Border Height="170"
                     Background="#DCEBFA"
                     CornerRadius="14"
                     Margin="0,0,0,18">
-                                <Grid>
-                                    <TextBlock Text="{Binding SelectedTrip.Name, TargetNullValue=NO PACKAGE}"
+                                    <Grid>
+                                        <TextBlock Text="{Binding SelectedTrip.Name, TargetNullValue=NO PACKAGE}"
                                FontSize="26"
                                FontWeight="Bold"
                                Foreground="#1F3A5F"
@@ -574,143 +563,143 @@
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Margin="12"/>
-                                </Grid>
-                            </Border>
+                                    </Grid>
+                                </Border>
 
-                            <!-- Title -->
-                            <TextBlock Text="{Binding SelectedTrip.Name, TargetNullValue=No package selected}"
+                                <!-- Title -->
+                                <TextBlock Text="{Binding SelectedTrip.Name, TargetNullValue=No package selected}"
                        FontSize="24"
                        FontWeight="Bold"
                        Foreground="#1F2937"/>
 
-                            <TextBlock Text="{Binding SelectedTrip.Season.Name, TargetNullValue=No season}"
+                                <TextBlock Text="{Binding SelectedTrip.Season.Name, TargetNullValue=No season}"
                        FontSize="15"
                        Foreground="#6B7280"
                        Margin="0,6,0,16"/>
 
-                            <!-- Price -->
-                            <Border Background="#F3F8FF"
+                                <!-- Price -->
+                                <Border Background="#F3F8FF"
                     CornerRadius="12"
                     Padding="14"
                     Margin="0,0,0,16">
-                                <StackPanel>
-                                    <TextBlock Text="Price"
+                                    <StackPanel>
+                                        <TextBlock Text="Price"
                                FontSize="14"
                                Foreground="#6B7280"/>
-                                    <TextBlock Text="{Binding SelectedTrip.Price, StringFormat=€ {0:F2}, TargetNullValue=-}"
+                                        <TextBlock Text="{Binding SelectedTrip.Price, StringFormat=€ {0:F2}, TargetNullValue=-}"
                                FontSize="30"
                                FontWeight="Bold"
                                Foreground="#1F2937"
                                Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
+                                    </StackPanel>
+                                </Border>
 
-                            <!-- Details -->
-                            <Border Background="#FAFBFF"
+                                <!-- Details -->
+                                <Border Background="#FAFBFF"
                     BorderBrush="#E5E7EB"
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="14"
                     Margin="0,0,0,16">
-                                <StackPanel>
-                                    <TextBlock Text="Package Details"
+                                    <StackPanel>
+                                        <TextBlock Text="Package Details"
                                FontSize="16"
                                FontWeight="SemiBold"
                                Foreground="#1F2937"
                                Margin="0,0,0,12"/>
 
-                                    <TextBlock Margin="0,0,0,8">
+                                        <TextBlock Margin="0,0,0,8">
                         <Run Text="Transport: "/>
                         <Run Text="{Binding SelectedTrip.TransportName, Mode=OneWay, TargetNullValue=N/A}"/>
-                                    </TextBlock>
+                                        </TextBlock>
 
-                                    <TextBlock Margin="0,0,0,8">
+                                        <TextBlock Margin="0,0,0,8">
                         <Run Text="Stay: "/>
                         <Run Text="{Binding SelectedTrip.StayName, Mode=OneWay, TargetNullValue=N/A}"/>
-                                    </TextBlock>
+                                        </TextBlock>
 
-                                    <TextBlock Margin="0,0,0,8">
+                                        <TextBlock Margin="0,0,0,8">
                         <Run Text="Season: "/>
                         <Run Text="{Binding SelectedTrip.Season.Name, TargetNullValue=N/A}"/>
-                                    </TextBlock>
+                                        </TextBlock>
 
-                                    <TextBlock Margin="0,0,0,8">
+                                        <TextBlock Margin="0,0,0,8">
                         <Run Text="Start Date: "/>
                         <Run Text="{Binding SelectedTrip.Season.StartDate, StringFormat={}{0:dd MMM yyyy}, TargetNullValue=-}"/>
-                                    </TextBlock>
+                                        </TextBlock>
 
-                                    <TextBlock Margin="0,0,0,8">
+                                        <TextBlock Margin="0,0,0,8">
                         <Run Text="End Date: "/>
                         <Run Text="{Binding SelectedTrip.Season.EndDate, StringFormat={}{0:dd MMM yyyy}, TargetNullValue=-}"/>
-                                    </TextBlock>
+                                        </TextBlock>
 
-                                    <TextBlock>
+                                        <TextBlock>
                         <Run Text="Days Count: "/>
                         <Run Text="{Binding SelectedTrip.DaysCount, Mode=OneWay, TargetNullValue=0}"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
 
-                            <!-- Extra services -->
-                            <Border Background="#FAFBFF"
+                                <!-- Extra services -->
+                                <Border Background="#FAFBFF"
                     BorderBrush="#E5E7EB"
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="14"
                     Margin="0,0,0,20">
-                                <StackPanel>
-                                    <TextBlock Text="Extra Services"
+                                    <StackPanel>
+                                        <TextBlock Text="Extra Services"
                                FontSize="16"
                                FontWeight="SemiBold"
                                Foreground="#1F2937"
                                Margin="0,0,0,10"/>
 
-                                    <ItemsControl ItemsSource="{Binding SelectedTrip.ExtraServiceNames}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#E5EDFF"
+                                        <ItemsControl ItemsSource="{Binding SelectedTrip.ExtraServiceNames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#E5EDFF"
                                         CornerRadius="8"
                                         Padding="8,4"
                                         Margin="0,0,0,8"
                                         HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding}"
+                                                        <TextBlock Text="{Binding}"
                                                Foreground="#2F5BD1"
                                                FontSize="12"
                                                FontWeight="SemiBold"/>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
 
-                                    <TextBlock Text="No extra services"
+                                        <TextBlock Text="No extra services"
                                Foreground="#6B7280">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding SelectedTrip.ExtraServices.Count}" Value="0">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding SelectedTrip}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedTrip.ExtraServices.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding SelectedTrip}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
 
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="0"
+                                    <Button Grid.Column="0"
             Content="Edit"
             Height="40"
             Background="#F3F4F6"
@@ -719,7 +708,7 @@
             FontWeight="SemiBold"
             Click="EditPackage_Click"/>
 
-                                <Button Grid.Column="2"
+                                    <Button Grid.Column="2"
             Content="Clone"
             Height="40"
             Background="#2F80ED"
@@ -728,7 +717,7 @@
             FontWeight="SemiBold"
             Command="{Binding CloneCommand}"/>
 
-                                <Button Grid.Column="4"
+                                    <Button Grid.Column="4"
             Content="Delete"
             Height="40"
             Background="#E74C3C"
@@ -736,8 +725,8 @@
             BorderBrush="Transparent"
             FontWeight="SemiBold"
             Command="{Binding DeleteCommand}"/>
-                            </Grid>
-                        </StackPanel>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

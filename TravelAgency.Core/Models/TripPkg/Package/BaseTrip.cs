@@ -1,5 +1,5 @@
-﻿using TravelAgency.Core.Decorator;
-using TravelAgency.Core.Models.TripPkg.Package;
+﻿using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Patterns.Decorator;
 
 public class BaseTrip : ITripComponent
 {

@@ -5,11 +5,12 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using TravelAgency.Core.Data.Repositories;
-using TravelAgency.Core.Decorator;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.Users;
+using TravelAgency.Core.Patterns.Decorator;
+using TravelAgency.Core.Patterns.Flyweight;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Commands;
@@ -25,7 +26,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         private string _searchText = "";
         private Visibility _packagesVisibility = Visibility.Visible;
         private Visibility _bookingsVisibility = Visibility.Collapsed;
-        private readonly IBookingRepository _bookingRepository;
+        private readonly IBookingAccessService _bookingService;
         private readonly string _currentClientUsername;
 
         public Visibility PackagesVisibility
@@ -119,8 +120,14 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
         public ClientWindowViewModel()
         {
-            _bookingRepository = new EfBookingRepository();
-            _currentClientUsername = SessionManager.Instance.CurrentSession.CurrentUser?.Username ?? "";
+            var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
+                ?? throw new InvalidOperationException("User not authenticated.");
+
+            _bookingService = new BookingAccessProxy(
+                new BookingAccessService(new EfBookingRepository()),
+                currentUser);
+
+            _currentClientUsername = currentUser.Username ?? "";
             if (SessionManager.Instance.CurrentSession.CurrentUser == null)
             {
                 throw new InvalidOperationException("User not authenticated.");
@@ -178,6 +185,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             if (Packages.Count == 0)
             {
                 // fallback: date demo, ca înainte
+                var factory = PackageSharedInfoFactorySingleton.Instance;
+
                 Packages.Add(new TripPackage
                 {
                     Id = 1,
@@ -186,8 +195,15 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     TransportDisplayName = "Plane",
                     StayDisplayName = "Hotel",
                     ShortDescription = "A relaxing city break in Paris.",
-                    Destination = "Paris",
-                    Country = "France"
+
+                    SharedInfo = factory.GetOrCreate(
+                        "Paris",
+                        "France",
+                        "Chisinau",
+                        "Hotel Paris",
+                        "Breakfast",
+                        "Plane",
+                        "Hotel")
                 });
 
                 Packages.Add(new TripPackage
@@ -198,8 +214,15 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     TransportDisplayName = "Bus",
                     StayDisplayName = "Hostel",
                     ShortDescription = "A short and charming Venice trip.",
-                    Destination = "Venice",
-                    Country = "Italy"
+
+                    SharedInfo = factory.GetOrCreate(
+                        "Venice",
+                        "Italy",
+                        "Chisinau",
+                        "Hostel Venice",
+                        "None",
+                        "Bus",
+                        "Hostel")
                 });
 
                 Packages.Add(new TripPackage
@@ -210,8 +233,15 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     TransportDisplayName = "Plane",
                     StayDisplayName = "Hotel",
                     ShortDescription = "An unforgettable alpine adventure.",
-                    Destination = "Zermatt",
-                    Country = "Switzerland"
+
+                    SharedInfo = factory.GetOrCreate(
+          "Zermatt",
+          "Switzerland",
+          "Chisinau",
+          "Alps Hotel",
+          "Breakfast",
+          "Plane",
+          "Hotel")
                 });
             }
 
@@ -331,7 +361,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 var validator = new BookingValidator();
                 validator.ValidateAndThrow(booking);
 
-                _bookingRepository.Add(booking);
+                _bookingService.SubmitBooking(booking);
                 LoadMyBookings();
 
                 MessageBox.Show(
@@ -361,9 +391,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         private void LoadMyBookings()
         {
             MyBookings.Clear();
-
-            var bookings = _bookingRepository.GetByClientUsername(_currentClientUsername);
-
+            var bookings = _bookingService.GetBookingsForCurrentUser();
             foreach (var booking in bookings)
             {
                 MyBookings.Add(booking);

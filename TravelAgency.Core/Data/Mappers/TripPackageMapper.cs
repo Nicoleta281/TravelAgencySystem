@@ -4,6 +4,7 @@ using TravelAgency.Core.Data.Entities;
 using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.TripPkg.Services;
+using TravelAgency.Core.Patterns.Flyweight;
 
 namespace TravelAgency.Core.Data.Mappers
 {
@@ -36,10 +37,12 @@ namespace TravelAgency.Core.Data.Mappers
 
                 TransportType = trip.Transport?.GetType().Name
                     ?? trip.TransportDisplayName
+                    ?? trip.SharedInfo?.TransportType
                     ?? "",
 
                 StayType = trip.Stay?.GetType().Name
                     ?? trip.StayDisplayName
+                    ?? trip.SharedInfo?.StayType
                     ?? "",
 
                 ExtraServices = string.Join(",", trip.ExtraServices.Select(x => x.GetType().Name)),
@@ -59,6 +62,15 @@ namespace TravelAgency.Core.Data.Mappers
 
         public static TripPackage FromEntity(TripPackageEntity e)
         {
+            var sharedInfo = PackageSharedInfoFactorySingleton.Instance.GetOrCreate(
+                e.Destination ?? "",
+                e.Country ?? "",
+                e.DepartureCity ?? "",
+                e.AccommodationName ?? "",
+                e.MealPlan ?? "",
+                e.TransportType ?? "",
+                e.StayType ?? "");
+
             var trip = new TripPackage
             {
                 Id = e.Id,
@@ -74,16 +86,13 @@ namespace TravelAgency.Core.Data.Mappers
                 TransportDisplayName = e.TransportType ?? "",
                 StayDisplayName = e.StayType ?? "",
 
-                Destination = e.Destination ?? "",
-                Country = e.Country ?? "",
-                DepartureCity = e.DepartureCity ?? "",
-                AccommodationName = e.AccommodationName ?? "",
-                MealPlan = e.MealPlan ?? "",
                 AvailableSeats = e.AvailableSeats,
 
                 DiscountPercent = e.DiscountPercent,
                 VatPercent = e.VatPercent,
                 ExtraCharges = e.ExtraCharges,
+
+                SharedInfo = sharedInfo,
 
                 Season = new Season
                 {
@@ -109,7 +118,6 @@ namespace TravelAgency.Core.Data.Mappers
 
             return trip;
         }
-
         private static IExtraService? CreateExtraServiceByName(string serviceName)
         {
             return serviceName switch

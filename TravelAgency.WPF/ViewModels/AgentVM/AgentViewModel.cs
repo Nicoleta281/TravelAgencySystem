@@ -21,7 +21,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
     {
         private readonly ITripPackageRepository _repo;
         private readonly TripCreationService _tripCreationService;
-        private readonly IBookingRepository _bookingRepository;
+        private readonly IBookingAccessService _bookingService;
         private Booking? _selectedBooking;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
@@ -137,7 +137,12 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             using (var db = TravelAgencyDbContextFactory.Create())
                 db.Database.Migrate();
 
-            _bookingRepository = new EfBookingRepository();
+            var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
+     ?? throw new InvalidOperationException("User not authenticated.");
+
+            var bookingRepository = new EfBookingRepository();
+            var realBookingService = new BookingAccessService(bookingRepository);
+            _bookingService = new BookingAccessProxy(realBookingService, currentUser);
 
             PendingBookings = new ObservableCollection<Booking>();
 
@@ -188,16 +193,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 };
 
                 var trip = _tripCreationService.CreateTrip(request);
-                trip.Destination = request.Destination;
-                trip.Country = request.Country;
-                trip.DepartureCity = request.DepartureCity;
-                trip.AccommodationName = request.AccommodationName;
-                trip.MealPlan = request.MealPlan;
-                trip.AvailableSeats = request.AvailableSeats;
 
-                trip.DiscountPercent = request.DiscountPercent;
-                trip.VatPercent = request.VatPercent;
-                trip.ExtraCharges = request.ExtraCharges;
                 _repo.Add(trip);
                 Trips.Add(trip);
                 SelectedTrip = trip;
@@ -251,22 +247,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     FinalPrice = price
                 };
 
-                var builder = new Core.Builders.TripPackageBuilder();
-                var director = new Core.Builders.TripDirector(builder);
+                var builder = new Core.Patterns.Builders.TripPackageBuilder();
+                var director = new Core.Patterns.Builders.TripDirector(builder);
 
                 var trip = director.Make(request);
 
                 
-                trip.Destination = request.Destination;
-                trip.Country = request.Country;
-                trip.DepartureCity = request.DepartureCity;
-                trip.AccommodationName = request.AccommodationName;
-                trip.MealPlan = request.MealPlan;
-                trip.AvailableSeats = request.AvailableSeats;
 
-                trip.DiscountPercent = request.DiscountPercent;
-                trip.VatPercent = request.VatPercent;
-                trip.ExtraCharges = request.ExtraCharges;
                 
 
                 _repo.Add(trip);
@@ -291,13 +278,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     return;
 
                 var clone = SelectedTrip.DeepClone();
-
                 clone.Id = 0;
                 clone.Name = SelectedTrip.Name + " (Clone)";
 
                 _repo.Add(clone);
-                Trips.Add(clone);
-                SelectedTrip = clone;
+
+                LoadTrips();
+                SelectedTrip = Trips.LastOrDefault();
 
                 Status = $"Cloned: {clone.Name}";
             }
@@ -411,7 +398,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             PendingBookings.Clear();
 
-            var bookings = _bookingRepository.GetPending();
+            var bookings = _bookingService.GetPendingBookings();
 
             foreach (var booking in bookings)
             {
@@ -430,8 +417,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 return;
             }
 
-            SelectedBooking.ConfirmBooking();
-            _bookingRepository.Update(SelectedBooking);
+            _bookingService.ApproveBooking(SelectedBooking);
 
             LoadPendingBookings();
 
@@ -452,8 +438,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 return;
             }
 
-            SelectedBooking.RejectBooking();
-            _bookingRepository.Update(SelectedBooking);
+            _bookingService.RejectBooking(SelectedBooking);
 
             LoadPendingBookings();
 

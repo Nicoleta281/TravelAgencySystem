@@ -1,10 +1,11 @@
 using System;
-using TravelAgency.Core.Builders;
-using TravelAgency.Core.Factories.AbstractFactory;
+using System.Linq;
+using FluentValidation;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.TripPkg.Services;
-using FluentValidation;
+using TravelAgency.Core.Patterns.Builders;
+using TravelAgency.Core.Patterns.Factories.AbstractFactory;
 using TravelAgency.Core.Validators;
 
 namespace TravelAgency.Core.Services
@@ -32,29 +33,23 @@ namespace TravelAgency.Core.Services
 
             var trip = director.Make(request);
 
-            // completare explicita a tuturor campurilor importante
+            // completare explicita a campurilor non-flyweight
             trip.Name = request.PackageName ?? "";
             trip.TripType = request.TripType ?? "";
             trip.Category = request.Category ?? "";
             trip.ShortDescription = request.ShortDescription ?? "";
             trip.BasePrice = request.BasePrice;
-
-            // Only override price when FinalPrice provided (>0). Builder already sets price otherwise.
-            if (request.FinalPrice > 0)
-                trip.Price = request.FinalPrice;
-
-            trip.Destination = request.Destination ?? "";
-            trip.Country = request.Country ?? "";
-            trip.DepartureCity = request.DepartureCity ?? "";
-            trip.AccommodationName = request.AccommodationName ?? "";
-            trip.MealPlan = request.MealPlan ?? "";
             trip.AvailableSeats = request.AvailableSeats;
 
             trip.DiscountPercent = request.DiscountPercent;
             trip.VatPercent = request.VatPercent;
             trip.ExtraCharges = request.ExtraCharges;
 
-            // season: only set if both dates provided to match builder behavior
+            // doar daca utilizatorul a dat explicit final price
+            if (request.FinalPrice > 0)
+                trip.Price = request.FinalPrice;
+
+            // season: doar daca sunt ambele date
             if (request.StartDate.HasValue && request.EndDate.HasValue)
             {
                 trip.Season = new Season
@@ -65,15 +60,18 @@ namespace TravelAgency.Core.Services
                 };
             }
 
-            // componente create prin factory
+            // componente create prin Abstract Factory
             trip.Transport = transport;
             trip.Stay = stay;
 
-            // Use resolved transportType/stay fallback so display matches actual components
-            trip.TransportDisplayName = !string.IsNullOrWhiteSpace(request.TransportType) ? request.TransportType : transportType;
+            // pentru UI / fallback vizual
+            trip.TransportDisplayName = !string.IsNullOrWhiteSpace(request.TransportType)
+                ? request.TransportType
+                : transportType;
+
             trip.StayDisplayName = request.AccommodationType ?? "";
 
-            // refacem serviciile suplimentare exact dupa checkbox-uri
+            // refacem serviciile suplimentare dupa checkbox-uri
             trip.ExtraServices.Clear();
 
             if (request.AirportTransfer)
@@ -92,7 +90,7 @@ namespace TravelAgency.Core.Services
             if (trip.Days.Count == 0)
                 trip.AddDay(new TripDay());
 
-            // ===== FluentValidation pe TripPackage =====
+            // validare finala
             var validator = new TripPackageValidator();
             var result = validator.Validate(trip);
 

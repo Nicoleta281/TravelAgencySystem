@@ -1,26 +1,14 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using TravelAgency.Core.Facade;
 using System.Windows.Media;
-using TravelAgency.Core.Adapters.GeoDb;
-using TravelAgency.Core.Adapters.SerpApi;
-using TravelAgency.Core.Data.Repositories;
-using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
-using TravelAgency.Core.Patterns.Composite;
-using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using FluentValidation;
-using System.Threading;
 using System.Windows.Input;
+using TravelAgency.Core.Patterns.Facades;
 namespace TravelAgency.WPF.Views
 {
     public partial class CreatePackageWindow : Window

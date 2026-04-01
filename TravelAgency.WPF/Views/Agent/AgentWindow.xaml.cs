@@ -1,5 +1,5 @@
 using System.Windows;
-using TravelAgency.Core.Adapters.SerpApi;
+using TravelAgency.Core.Patterns.Adapters.SerpApi;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Models.Locations;
 using TravelAgency.WPF.ViewModels.AgentVM;

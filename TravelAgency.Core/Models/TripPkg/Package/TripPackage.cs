@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using TravelAgency.Core.Interfaces;
-using TravelAgency.Core.Prototypes;
 using TravelAgency.Core.Patterns.Composite;
+using TravelAgency.Core.Patterns.Flyweight;
+using TravelAgency.Core.Patterns.Prototypes;
 
 namespace TravelAgency.Core.Models.TripPkg.Package
 {
@@ -17,16 +21,21 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public string PricingNotes { get; set; } = "";
         public double BasePrice { get; set; }
 
-        public string Destination { get; set; } = "";
-        public string Country { get; set; } = "";
-        public string DepartureCity { get; set; } = "";
-        public string AccommodationName { get; set; } = "";
-        public string MealPlan { get; set; } = "";
+        // Flyweight
+        public PackageSharedInfo? SharedInfo { get; set; }
+
+        public string Destination => SharedInfo?.Destination ?? "";
+        public string Country => SharedInfo?.Country ?? "";
+        public string DepartureCity => SharedInfo?.DepartureCity ?? "";
+        public string AccommodationName => SharedInfo?.AccommodationName ?? "";
+        public string MealPlan => SharedInfo?.MealPlan ?? "";
+
         public int AvailableSeats { get; set; }
 
         public double DiscountPercent { get; set; }
         public double VatPercent { get; set; }
         public double ExtraCharges { get; set; }
+
         public Season? Season { get; set; }
 
         public List<TripDay> Days { get; set; } = new();
@@ -38,6 +47,7 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public string TransportDisplayName { get; set; } = "";
         public string StayDisplayName { get; set; } = "";
         public IExtraServiceComponent? ExtraServiceBundle { get; set; }
+
         public int DaysCount
         {
             get
@@ -66,22 +76,22 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public IEnumerable<string> ExtraServiceNames =>
             ExtraServices?.Select(x => x.GetType().Name) ?? Enumerable.Empty<string>();
 
-
-        // ===== Helpers pentru UI =====
-
         public void AddDay(TripDay day)
         {
-            if (day == null) throw new ArgumentNullException(nameof(day));
+            if (day == null)
+                throw new ArgumentNullException(nameof(day));
+
             Days.Add(day);
         }
 
         public void AddExtraService(IExtraService service)
         {
-            if (service == null) throw new ArgumentNullException(nameof(service));
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+
             ExtraServices.Add(service);
         }
 
-        // ===== Prototype =====
         public TripPackage ShallowClone() => (TripPackage)MemberwiseClone();
 
         public TripPackage DeepClone()
@@ -101,7 +111,10 @@ namespace TravelAgency.Core.Models.TripPkg.Package
             copy.ExtraServices = ExtraServices?.ToList() ?? new List<IExtraService>();
             copy.Days = Days?.ToList() ?? new List<TripDay>();
 
-            // Transport/Stay rămân shallow (deocamdată)
+            // Flyweight ramane shared intentionat
+            copy.SharedInfo = SharedInfo;
+
+            // Transport/Stay raman shallow
             copy.Transport = Transport;
             copy.Stay = Stay;
 

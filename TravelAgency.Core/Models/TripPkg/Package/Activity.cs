@@ -1,4 +1,4 @@
-﻿using TravelAgency.Core.Prototypes;
+﻿using TravelAgency.Core.Patterns.Prototypes;
 
 namespace TravelAgency.Core.Models.TripPkg.Package
 {
