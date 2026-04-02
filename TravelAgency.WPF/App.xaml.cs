@@ -1,5 +1,6 @@
-﻿using System.Windows;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
+using System.Windows;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Services;
@@ -24,6 +25,9 @@ namespace TravelAgency.WPF
 
             var loginWindow = new LoginWindow();
             loginWindow.Show();
+
+            QuestPDF.Settings.License = LicenseType.Community;
+            base.OnStartup(e);
         }
     }
 }

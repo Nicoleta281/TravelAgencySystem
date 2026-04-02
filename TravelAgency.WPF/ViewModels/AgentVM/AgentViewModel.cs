@@ -22,10 +22,40 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         private readonly ITripPackageRepository _repo;
         private readonly TripCreationService _tripCreationService;
         private readonly IBookingAccessService _bookingService;
+        private readonly AgentReportService _reportService = new();
         private Booking? _selectedBooking;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
         public ObservableCollection<Booking> PendingBookings { get; set; }
+
+        public ObservableCollection<string> ReportTypes { get; } = new()
+{
+    "All Bookings",
+    "Pending Bookings",
+    "Confirmed Bookings",
+    "Rejected Bookings"
+};
+
+        public ObservableCollection<string> ExportFormats { get; } = new()
+{
+    "PDF",
+    "CSV",
+    "TXT"
+};
+
+        private string _selectedReportType = "All Bookings";
+        public string SelectedReportType
+        {
+            get => _selectedReportType;
+            set => Set(ref _selectedReportType, value);
+        }
+
+        private string _selectedExportFormat = "PDF";
+        public string SelectedExportFormat
+        {
+            get => _selectedExportFormat;
+            set => Set(ref _selectedExportFormat, value);
+        }
 
         public ICollectionView TripsView { get; }
         public int TotalPackagesCount => Trips.Count;
@@ -109,6 +139,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand RejectBookingCommand { get; set; }
         public ICommand RefreshPendingBookingsCommand { get; set; }
         public ICommand LogoutCommand { get; }
+
+        public ICommand ShowReportsCommand { get; }
+        public ICommand ShowPackagesCommand { get; }
+        public ICommand ShowBookingsCommand { get; }
+        public ICommand GenerateReportCommand { get; }
+
+
         public AgentViewModel()
             : this(new EfTripPackageRepository(), new TripCreationService())
         {
@@ -130,6 +167,10 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             ReloadCommand = new RelayCommand(LoadTrips);
             UpdateCommand = new RelayCommand(UpdateSelected, () => SelectedTrip != null);
             DeleteCommand = new RelayCommand(DeleteSelected, () => SelectedTrip != null);
+            ShowReportsCommand = new RelayCommand(ShowReports);
+            ShowPackagesCommand = new RelayCommand(ShowPackages);
+            ShowBookingsCommand = new RelayCommand(ShowBookings);
+            GenerateReportCommand = new RelayCommand(GenerateReport);
 
             LogoutCommand = new RelayCommand(Logout);
 
@@ -447,7 +488,65 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
         }
+        private Visibility _packagesVisibility = Visibility.Visible;
+        public Visibility PackagesVisibility
+        {
+            get => _packagesVisibility;
+            set => Set(ref _packagesVisibility, value);
+        }
 
+        private Visibility _reportsVisibility = Visibility.Collapsed;
+        public Visibility ReportsVisibility
+        {
+            get => _reportsVisibility;
+            set => Set(ref _reportsVisibility, value);
+        }
+
+        private void ShowReports()
+        {
+            PackagesVisibility = Visibility.Collapsed;
+            ReportsVisibility = Visibility.Visible;
+        }
+
+        private void ShowPackages()
+        {
+            PackagesVisibility = Visibility.Visible;
+            ReportsVisibility = Visibility.Collapsed;
+        }
+
+        private void ShowBookings()
+        {
+            PackagesVisibility = Visibility.Collapsed;
+            ReportsVisibility = Visibility.Collapsed;
+        }
+
+        private void GenerateReport()
+        {
+            try
+            {
+                var allBookings = PendingBookings.ToList();
+
+                var outputPath = _reportService.GenerateReport(
+                    SelectedReportType,
+                    SelectedExportFormat,
+                    allBookings,
+                    "Agent");
+
+                MessageBox.Show(
+                    $"Report generated:\n{outputPath}",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error:\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
 
         private void Logout()
         {
@@ -462,5 +561,6 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             currentWindow?.Close();
         }
+
     }
 }

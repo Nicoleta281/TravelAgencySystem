@@ -64,26 +64,35 @@
 
                 <!-- Navigation -->
                 <StackPanel Grid.Row="1" Margin="20,10,20,20">
-                    <Button Content="Dashboard" Style="{StaticResource SidebarButtonStyle}" Background="#2F80ED"/>
+                    <Button Content="Dashboard"
+            Style="{StaticResource SidebarButtonStyle}"
+            Background="#2F80ED"
+            Command="{Binding ShowPackagesCommand}"/>
+
                     <Button Content="Packages"
-        Style="{StaticResource SidebarButtonStyle}"
-        Command="{Binding ShowPackagesCommand}"/>
+            Style="{StaticResource SidebarButtonStyle}"
+            Command="{Binding ShowPackagesCommand}"/>
 
                     <Button Content="Bookings"
-        Style="{StaticResource SidebarButtonStyle}"
-        Command="{Binding ShowBookingsCommand}"/>
-                    <Button Content="Clients" Style="{StaticResource SidebarButtonStyle}"/>
-                    <Button Content="Reports" Style="{StaticResource SidebarButtonStyle}"/>
+            Style="{StaticResource SidebarButtonStyle}"
+            Command="{Binding ShowBookingsCommand}"/>
+
+                    <Button Content="Clients"
+            Style="{StaticResource SidebarButtonStyle}"/>
+
+                    <Button Content="Reports"
+            Style="{StaticResource SidebarButtonStyle}"
+            Command="{Binding ShowReportsCommand}"/>
 
                     <Button Content="Logout"
-        Command="{Binding LogoutCommand}"
-        Background="#EF4444"
-        Foreground="White"
-        Margin="0,20,0,0"/>
+            Command="{Binding LogoutCommand}"
+            Background="#EF4444"
+            Foreground="White"
+            Margin="0,20,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>
-
+       
         <!-- Main Content -->
         <Grid Grid.Column="1"
       Margin="24"
@@ -93,6 +102,7 @@
                 <RowDefinition Height="120"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
+            
 
             <!-- Header -->
             <Border Grid.Row="0"
@@ -216,6 +226,7 @@
             </Grid>
 
             <!-- Main Area -->
+            
             <Grid Grid.Row="2" Grid.ColumnSpan="3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="197*"/>
@@ -731,6 +742,134 @@
                     </ScrollViewer>
                 </Border>
             </Grid>
+        </Grid>
+
+        <!-- REPORTS -->
+        <Grid Grid.Column="1"
+      Margin="24"
+      Visibility="{Binding ReportsVisibility}">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+            Background="White"
+            CornerRadius="16"
+            Padding="24">
+                <StackPanel>
+                    <TextBlock Text="Generate Reports"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="#1F2937"/>
+
+                    <TextBlock Text="Export booking reports in PDF, CSV or TXT format"
+                       FontSize="14"
+                       Foreground="#6B7280"
+                       Margin="0,6,0,20"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox Width="250"
+                          Height="40"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding ReportTypes}"
+                          SelectedItem="{Binding SelectedReportType}"/>
+
+                        <ComboBox Width="140"
+                          Height="40"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding ExportFormats}"
+                          SelectedItem="{Binding SelectedExportFormat}"/>
+
+                        <Button Content="Generate"
+                        Width="120"
+                        Height="40"
+                        Background="#2F80ED"
+                        Foreground="White"
+                        BorderBrush="Transparent"
+                        FontWeight="SemiBold"
+                        Command="{Binding GenerateReportCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2"
+            Background="White"
+            CornerRadius="16"
+            Padding="24">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="Pending Bookings Preview"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           Foreground="#1F2937"/>
+
+                        <TextBlock Text="These are the booking requests currently loaded for report generation"
+                           FontSize="14"
+                           Foreground="#6B7280"
+                           Margin="0,6,0,18"/>
+                    </StackPanel>
+
+                    <ListBox Grid.Row="1"
+                     ItemsSource="{Binding PendingBookings}"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     HorizontalContentAlignment="Stretch">
+
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,12"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="16"
+                                BorderBrush="#E5E7EB"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Background="#FAFBFF">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding TripPackage.Name}"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           Foreground="#1F2937"/>
+
+                                        <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding Client.Username, StringFormat=Client: {0}}"
+                                           Foreground="#374151"/>
+
+                                        <TextBlock Margin="0,4,0,0"
+                                           Text="{Binding BookingDate, StringFormat=Booked on: {0:dd MMM yyyy HH:mm}}"
+                                           Foreground="#374151"/>
+
+                                        <TextBlock Margin="0,4,0,0"
+                                           Text="{Binding Status.Name, StringFormat=Status: {0}}"
+                                           Foreground="#374151"/>
+
+                                        <TextBlock Margin="0,4,0,0"
+                                           Text="{Binding TotalPrice, StringFormat=Total Price: € {0:F2}}"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1F2937"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </Window>

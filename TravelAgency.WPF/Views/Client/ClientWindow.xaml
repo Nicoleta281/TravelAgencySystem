@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:models="clr-namespace:TravelAgency.Core.Models;assembly=TravelAgency.Core"
-        xmlns:tripModels="clr-namespace:TravelAgency.Core.Models.TripPkg.Package;assembly=TravelAgency.Core"
+        xmlns:pkg="clr-namespace:TravelAgency.Core.Models.TripPkg.Package;assembly=TravelAgency.Core"
         mc:Ignorable="d"
         Title="Client Workspace"
         Height="800"
@@ -224,7 +224,7 @@
                                 </ItemsControl.ItemsPanel>
 
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type tripModels:TripPackage}">
+                                    <DataTemplate DataType="{x:Type pkg:TripPackage}">
                                         <Border Width="220"
                                 Height="310"
                                 Margin="0,0,16,16"
