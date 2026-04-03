@@ -5,6 +5,7 @@ namespace TravelAgency.Core.Data.Repositories
 {
     public interface IUserRepository
     {
+        User? GetById(int id);
         IReadOnlyList<User> GetAll();
         User? GetByUsername(string username);
         User Add(User user);

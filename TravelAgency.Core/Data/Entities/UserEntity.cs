@@ -13,5 +13,6 @@ namespace TravelAgency.Core.Data.Entities
         public string PasswordHash { get; set; } = "";
         public string RoleName { get; set; } = "";
         public bool IsActive { get; set; } = true;
+        public bool IsBlocked { get; set; }
     }
 }

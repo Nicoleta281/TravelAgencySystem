@@ -18,7 +18,7 @@ using TravelAgency.WPF.Views;
 
 namespace TravelAgency.WPF.ViewModels.ClientVM
 {
-    public class ClientWindowViewModel : INotifyPropertyChanged
+    public class ClientViewModel : INotifyPropertyChanged
     {
         private TripPackage? _selectedPackage;
         private double _basePrice;
@@ -28,6 +28,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         private Visibility _bookingsVisibility = Visibility.Collapsed;
         private readonly IBookingAccessService _bookingService;
         private readonly string _currentClientUsername;
+        private readonly IUserRepository _userRepository;
 
         public Visibility PackagesVisibility
         {
@@ -118,7 +119,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             }
         }
 
-        public ClientWindowViewModel()
+        public ClientViewModel()
         {
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
                 ?? throw new InvalidOperationException("User not authenticated.");
@@ -126,6 +127,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             _bookingService = new BookingAccessProxy(
                 new BookingAccessService(new EfBookingRepository()),
                 currentUser);
+            _userRepository = new EfUserRepository();
+            LogoutCommand = new RelayCommand(Logout);
 
             _currentClientUsername = currentUser.Username ?? "";
             if (SessionManager.Instance.CurrentSession.CurrentUser == null)
@@ -400,16 +403,23 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
         private void Logout()
         {
-            var currentWindow = Application.Current.Windows
-                .OfType<Window>()
-                .FirstOrDefault(w => w.IsActive);
+            var currentUser = SessionManager.Instance.CurrentSession.CurrentUser;
+
+            if (currentUser != null)
+            {
+                currentUser.Logout();
+                _userRepository.Update(currentUser);
+            }
 
             SessionManager.Instance.CurrentSession.EndSession();
 
             var loginWindow = new LoginWindow();
             loginWindow.Show();
 
-            currentWindow?.Close();
+            Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w is Views.ClientWindow)
+                ?.Close();
         }
     }
 }

@@ -23,11 +23,10 @@ namespace TravelAgency.WPF
             var seedService = new UserSeedService(userRepository);
             seedService.SeedDefaultUsers();
 
+            QuestPDF.Settings.License = LicenseType.Community;
+
             var loginWindow = new LoginWindow();
             loginWindow.Show();
-
-            QuestPDF.Settings.License = LicenseType.Community;
-            base.OnStartup(e);
         }
     }
 }

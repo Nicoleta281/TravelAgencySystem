@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 
 namespace TravelAgency.Core.Models.Users
 {
     public class Agent : User
     {
-        public override void Login() { }
-        public override void Logout() { }
+        public override void Login()
+        {
+            Session.DateLogin = DateTime.Now;
+            Session.IsActive = true;
+        }
 
-        public void CreateTripPackage() { }
-
+        public override void Logout()
+        {
+            Session.IsActive = false;
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace TravelAgency.WPF.ViewModels
     public class LoginViewModel : ViewModelBase
     {
         private readonly AuthenticationService _authenticationService;
+        private readonly IUserRepository _userRepository;
         private readonly Window _loginWindow;
         public ICommand OpenRegisterCommand { get; }
 
@@ -45,6 +46,7 @@ namespace TravelAgency.WPF.ViewModels
         public LoginViewModel(Window loginWindow)
         {
             _loginWindow = loginWindow;
+            _userRepository = new EfUserRepository();
             _authenticationService = new AuthenticationService(new EfUserRepository());
             LoginCommand = new RelayCommand(Login);
             OpenRegisterCommand = new RelayCommand(OpenRegister);
@@ -80,33 +82,48 @@ namespace TravelAgency.WPF.ViewModels
                 return;
             }
 
+            user.Login();
+            _userRepository.Update(user);
+
             SessionManager.Instance.CurrentSession.StartSession(user);
 
-            OpenWorkspaceByRole(user);
+            bool opened = OpenWorkspaceByRole(user);
 
-            _loginWindow.Close();
+            if (opened)
+            {
+                _loginWindow.Close();
+            }
         }
 
-        private void OpenWorkspaceByRole(User user)
+        private bool OpenWorkspaceByRole(User user)
         {
-            if (user.Role?.Name == "Agent")
+            if (user is TravelAgency.Core.Models.Users.Admin)
+            {
+                var adminWindow = new AdminWindow();
+                adminWindow.Show();
+                return true;
+            }
+
+            if (user is Agent)
             {
                 var agentWindow = new AgentWindow();
                 agentWindow.Show();
-                return;
+                return true;
             }
 
-            if (user.Role?.Name == "Client")
+            if (user is Client)
             {
                 var clientWindow = new ClientWindow();
                 clientWindow.Show();
-                return;
+                return true;
             }
 
-            MessageBox.Show("Unknown role assigned to this user.",
+            MessageBox.Show("Unknown user type assigned to this user.",
                             "Login",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
+
+            return false;
         }
 
         private void OpenRegister()

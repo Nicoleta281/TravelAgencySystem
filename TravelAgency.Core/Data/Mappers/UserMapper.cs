@@ -14,20 +14,28 @@ namespace TravelAgency.Core.Data.Mappers
                 Username = user.Username,
                 PasswordHash = user.PasswordHash,
                 RoleName = user.Role?.Name ?? "",
-                IsActive = user.Session?.IsActive ?? false
+                IsActive = user.Session?.IsActive ?? false,
+                IsBlocked = user.IsBlocked
             };
         }
 
         public static User FromEntity(UserEntity entity)
         {
-            User user = entity.RoleName == "Agent"
-                ? new Agent()
-                : new Client();
+            var roleName = entity.RoleName?.Trim().ToLower();
+
+            User user = roleName switch
+            {
+                "admin" => new Admin(),
+                "agent" => new Agent(),
+                "client" => new Client(),
+                _ => new Client()
+            };
 
             user.Id = entity.Id;
             user.Username = entity.Username;
             user.PasswordHash = entity.PasswordHash;
             user.Role = new Role { Name = entity.RoleName };
+            user.IsBlocked = entity.IsBlocked;
             user.Session = new UserSession
             {
                 IsActive = entity.IsActive

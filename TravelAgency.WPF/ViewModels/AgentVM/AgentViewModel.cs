@@ -1,14 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models;
+using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Services;
@@ -24,9 +23,12 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         private readonly IBookingAccessService _bookingService;
         private readonly AgentReportService _reportService = new();
         private Booking? _selectedBooking;
+        private readonly IUserRepository _userRepository;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
         public ObservableCollection<Booking> PendingBookings { get; set; }
+        public ObservableCollection<Booking> AllBookings { get; } = new();
+        public ObservableCollection<Booking> ReportPreviewBookings { get; } = new();
 
         public ObservableCollection<string> ReportTypes { get; } = new()
 {
@@ -47,7 +49,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public string SelectedReportType
         {
             get => _selectedReportType;
-            set => Set(ref _selectedReportType, value);
+            set
+            {
+                if (Set(ref _selectedReportType, value))
+                {
+                    RefreshReportPreview();
+                }
+            }
         }
 
         private string _selectedExportFormat = "PDF";
@@ -184,6 +192,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             var bookingRepository = new EfBookingRepository();
             var realBookingService = new BookingAccessService(bookingRepository);
             _bookingService = new BookingAccessProxy(realBookingService, currentUser);
+            _userRepository = new EfUserRepository();
+            LogoutCommand = new RelayCommand(Logout);
 
             PendingBookings = new ObservableCollection<Booking>();
 
@@ -193,6 +203,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             LoadPendingBookings();
             LoadTrips();
+            LoadAllBookings();
         }
         private void LoadTrips()
         {
@@ -447,6 +458,21 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             }
         }
 
+        private void LoadAllBookings()
+        {
+            AllBookings.Clear();
+
+            var bookingRepository = new EfBookingRepository();
+            var allBookings = bookingRepository.GetAll();
+
+            foreach (var booking in allBookings)
+            {
+                AllBookings.Add(booking);
+            }
+
+            RefreshReportPreview();
+        }
+
         private void ApproveSelectedBooking()
         {
             if (SelectedBooking == null)
@@ -459,8 +485,11 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             }
 
             _bookingService.ApproveBooking(SelectedBooking);
+            LoadPendingBookings();
+            LoadAllBookings();
 
             LoadPendingBookings();
+
 
             MessageBox.Show("Booking request approved successfully.",
                             "Approve Booking",
@@ -482,6 +511,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             _bookingService.RejectBooking(SelectedBooking);
 
             LoadPendingBookings();
+            LoadAllBookings();
 
             MessageBox.Show("Booking request rejected successfully.",
                             "Reject Booking",
@@ -524,12 +554,12 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             try
             {
-                var allBookings = PendingBookings.ToList();
+                var bookingsToExport = ReportPreviewBookings.ToList();
 
                 var outputPath = _reportService.GenerateReport(
                     SelectedReportType,
                     SelectedExportFormat,
-                    allBookings,
+                    bookingsToExport,
                     "Agent");
 
                 MessageBox.Show(
@@ -548,18 +578,51 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             }
         }
 
+
+        private void RefreshReportPreview()
+        {
+            ReportPreviewBookings.Clear();
+
+            var filtered = SelectedReportType switch
+            {
+                "Pending Bookings" => AllBookings
+                    .Where(b => string.Equals(b.Status?.Name, "Pending", StringComparison.OrdinalIgnoreCase)),
+
+                "Confirmed Bookings" => AllBookings
+                    .Where(b => string.Equals(b.Status?.Name, "Confirmed", StringComparison.OrdinalIgnoreCase)),
+
+                "Rejected Bookings" => AllBookings
+                    .Where(b => string.Equals(b.Status?.Name, "Rejected", StringComparison.OrdinalIgnoreCase)),
+
+                _ => AllBookings
+            };
+
+            foreach (var booking in filtered)
+            {
+                ReportPreviewBookings.Add(booking);
+            }
+        }
+
+
         private void Logout()
         {
-            var currentWindow = Application.Current.Windows
-                .OfType<Window>()
-                .FirstOrDefault(w => w.IsActive);
+            var currentUser = SessionManager.Instance.CurrentSession.CurrentUser;
+
+            if (currentUser != null)
+            {
+                currentUser.Logout();
+                _userRepository.Update(currentUser);
+            }
 
             SessionManager.Instance.CurrentSession.EndSession();
 
             var loginWindow = new LoginWindow();
             loginWindow.Show();
 
-            currentWindow?.Close();
+            Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w is Views.AgentWindow)
+                ?.Close();
         }
 
     }

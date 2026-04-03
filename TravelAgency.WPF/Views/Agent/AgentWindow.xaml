@@ -376,7 +376,7 @@
                             </StackPanel>
 
                             <ListBox Grid.Row="2"
-                     ItemsSource="{Binding PendingBookings}"
+                     ItemsSource="{Binding ReportPreviewBookings}"
                      SelectedItem="{Binding SelectedBooking, Mode=TwoWay}"
                      BorderThickness="0"
                      Background="Transparent"
@@ -817,12 +817,13 @@
                            Margin="0,6,0,18"/>
                     </StackPanel>
 
-                    <ListBox Grid.Row="1"
-                     ItemsSource="{Binding PendingBookings}"
-                     BorderThickness="0"
-                     Background="Transparent"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     HorizontalContentAlignment="Stretch">
+                    <ListBox ItemsSource="{Binding ReportPreviewBookings}"
+         Height="420"
+         BorderThickness="0"
+         Background="Transparent"
+         HorizontalContentAlignment="Stretch"
+         ScrollViewer.VerticalScrollBarVisibility="Auto"
+         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
@@ -837,36 +838,24 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Padding="16"
-                                BorderBrush="#E5E7EB"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Background="#FAFBFF">
+                    BorderBrush="#E5E7EB"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Background="#FAFBFF">
                                     <StackPanel>
                                         <TextBlock Text="{Binding TripPackage.Name}"
-                                           FontSize="16"
-                                           FontWeight="Bold"
-                                           Foreground="#1F2937"/>
+                               FontSize="16"
+                               FontWeight="Bold"/>
 
-                                        <TextBlock Margin="0,8,0,0"
-                                           Text="{Binding Client.Username, StringFormat=Client: {0}}"
-                                           Foreground="#374151"/>
-
-                                        <TextBlock Margin="0,4,0,0"
-                                           Text="{Binding BookingDate, StringFormat=Booked on: {0:dd MMM yyyy HH:mm}}"
-                                           Foreground="#374151"/>
-
-                                        <TextBlock Margin="0,4,0,0"
-                                           Text="{Binding Status.Name, StringFormat=Status: {0}}"
-                                           Foreground="#374151"/>
-
-                                        <TextBlock Margin="0,4,0,0"
-                                           Text="{Binding TotalPrice, StringFormat=Total Price: € {0:F2}}"
-                                           FontWeight="SemiBold"
-                                           Foreground="#1F2937"/>
+                                        <TextBlock Text="{Binding Client.Username, StringFormat=Client: {0}}"/>
+                                        <TextBlock Text="{Binding BookingDate, StringFormat=Booked on: {0:dd MMM yyyy HH:mm}}"/>
+                                        <TextBlock Text="{Binding Status.Name, StringFormat=Status: {0}}"/>
+                                        <TextBlock Text="{Binding TotalPrice, StringFormat=Total Price: € {0:F2}}"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
+
                     </ListBox>
                 </Grid>
             </Border>

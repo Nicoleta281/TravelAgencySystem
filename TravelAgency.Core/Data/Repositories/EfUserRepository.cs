@@ -8,6 +8,15 @@ namespace TravelAgency.Core.Data.Repositories
 {
     public class EfUserRepository : IUserRepository
     {
+        public User? GetById(int id)
+        {
+            using var db = TravelAgencyDbContextFactory.Create();
+            var entity = db.Users
+                .AsNoTracking()
+                .FirstOrDefault(x => x.Id == id);
+
+            return entity == null ? null : UserMapper.FromEntity(entity);
+        }
         public IReadOnlyList<User> GetAll()
         {
             using var db = TravelAgencyDbContextFactory.Create();
@@ -51,6 +60,7 @@ namespace TravelAgency.Core.Data.Repositories
             entity.PasswordHash = mapped.PasswordHash;
             entity.RoleName = mapped.RoleName;
             entity.IsActive = mapped.IsActive;
+            entity.IsBlocked = mapped.IsBlocked;
 
             db.SaveChanges();
         }

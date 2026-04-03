@@ -10,12 +10,12 @@ namespace TravelAgency.WPF.Views
         public ClientWindow()
         {
             InitializeComponent();
-            DataContext = new ClientWindowViewModel();
+            DataContext = new ClientViewModel();
         }
 
         private void ViewDetails_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is ClientWindowViewModel vm &&
+            if (DataContext is ClientViewModel vm &&
                 sender is Button button &&
                 button.Tag is TripPackage trip)
             {

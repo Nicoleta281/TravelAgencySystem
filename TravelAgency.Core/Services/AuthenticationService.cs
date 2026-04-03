@@ -22,6 +22,9 @@ namespace TravelAgency.Core.Services
             if (!PasswordHasher.Verify(password, user.PasswordHash))
                 return null;
 
+            if (user.IsBlocked)
+                return null;
+
             return user;
         }
     }

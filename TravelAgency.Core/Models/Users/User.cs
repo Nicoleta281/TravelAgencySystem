@@ -10,7 +10,7 @@ namespace TravelAgency.Core.Models.Users
         public string PasswordHash { get; set; } = "";
         public Role Role { get; set; } = new();
         public UserSession Session { get; set; } = new();
-
+        public bool IsBlocked { get; set; }
         public abstract void Login();
         public abstract void Logout();
     }
