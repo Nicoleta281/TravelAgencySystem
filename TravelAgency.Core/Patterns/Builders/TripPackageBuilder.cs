@@ -7,7 +7,7 @@ namespace TravelAgency.Core.Patterns.Builders
 {
     public class TripPackageBuilder : ITripPackageBuilder
     {
-        private TripPackage _tripPackage;
+        private TripPackage _tripPackage = null!;
         private readonly PackageSharedInfoFactory _sharedInfoFactory;
 
         public TripPackageBuilder()
@@ -76,17 +76,7 @@ namespace TravelAgency.Core.Patterns.Builders
             _tripPackage.DiscountPercent = request.DiscountPercent;
             _tripPackage.VatPercent = request.VatPercent;
             _tripPackage.ExtraCharges = request.ExtraCharges;
-
-            if (request.FinalPrice > 0)
-            {
-                _tripPackage.Price = request.FinalPrice;
-            }
-            else
-            {
-                double afterDiscount = request.BasePrice - request.BasePrice * request.DiscountPercent / 100.0;
-                double afterVat = afterDiscount + afterDiscount * request.VatPercent / 100.0;
-                _tripPackage.Price = afterVat + request.ExtraCharges;
-            }
+            _tripPackage.Price = request.FinalPrice;
         }
 
         public TripPackage GetResult()

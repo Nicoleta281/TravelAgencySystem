@@ -9,25 +9,21 @@ using TravelAgency.Core.Validators;
 using FluentValidation;
 using System.Windows.Input;
 using TravelAgency.Core.Patterns.Facades;
+using TravelAgency.Core.Patterns.Strategy;
+
 namespace TravelAgency.WPF.Views
 {
     public partial class CreatePackageWindow : Window
     {
-
-
-
-
-
-        
-       
         private readonly TripPackage? _editingTrip;
-       
+
         private List<HotelSearchOption> _hotelResults = new();
         private readonly TravelPackageFacade _facade = new TravelPackageFacade();
         private List<LocationOption> _locationResults = new();
         private bool _isUpdatingDestinationSuggestions;
         private CancellationTokenSource? _locationSearchCts;
         private int currentStep = 1;
+        private bool _isLoading;
 
         public CreatePackageWindow(TripPackage? tripToEdit = null)
         {
@@ -61,14 +57,15 @@ namespace TravelAgency.WPF.Views
             UpdateWizardUI();
             UpdateLeftPreview();
         }
+
         private TripRequest BuildTripRequestFromForm()
         {
             string packageName = PackageNameTextBox.Text.Trim();
             string tripType = GetComboBoxText(TripTypeComboBox);
             string category = GetComboBoxText(CategoryComboBox);
             string shortDescription = ShortDescriptionTextBox.Text.Trim();
-            string destination = DestinationComboBox.Text.Trim(); 
-            
+            string destination = DestinationComboBox.Text.Trim();
+
             string country = CountryTextBox.Text.Trim();
             DateTime? startDate = StartDatePicker.SelectedDate;
             DateTime? endDate = EndDatePicker.SelectedDate;
@@ -115,12 +112,14 @@ namespace TravelAgency.WPF.Views
 
             decimal compositePrice = GetCompositeServicesPrice();
 
-            double finalPrice = (double)_facade.CalculateFinalPrice(
+            decimal final = CalculatePriceWithStrategy(
                 (decimal)basePrice,
                 (decimal)discount,
                 (decimal)vat,
                 (decimal)extraCharges,
                 compositePrice);
+
+            double finalPrice = (double)final;
 
             return new TripRequest
             {
@@ -154,6 +153,33 @@ namespace TravelAgency.WPF.Views
                 FinalPrice = finalPrice
             };
         }
+
+        private decimal CalculatePriceWithStrategy(
+            decimal basePrice,
+            decimal discount,
+            decimal vat,
+            decimal extraCharges,
+            decimal compositePrice)
+        {
+            IPricingStrategy strategy;
+
+            if (discount > 0 || vat > 0)
+            {
+                strategy = new FullPricingStrategy(discount, vat);
+            }
+            else
+            {
+                strategy = new StandardPricingStrategy();
+            }
+
+            var context = new PricingContext(strategy);
+
+            decimal finalPrice = context.CalculateFinalPrice(basePrice, extraCharges);
+            finalPrice += compositePrice;
+
+            return finalPrice;
+        }
+
         private void NextButton_Click(object sender, RoutedEventArgs e)
         {
             if (currentStep < 5)
@@ -168,7 +194,6 @@ namespace TravelAgency.WPF.Views
                 {
                     var request = BuildTripRequestFromForm();
 
-                    // FluentValidation pe TripRequest (input din wizard)
                     var validator = new TripRequestValidator();
                     validator.ValidateAndThrow(request);
 
@@ -241,6 +266,28 @@ namespace TravelAgency.WPF.Views
             return value;
         }
 
+        private static double ParseDoubleOrZero(string text)
+        {
+            if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out double value))
+                return value;
+
+            if (double.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value))
+                return value;
+
+            return 0;
+        }
+
+        private static decimal ParseDecimal(string text)
+        {
+            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal value))
+                return value;
+
+            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value))
+                return value;
+
+            return 0m;
+        }
+
         private void UpdateWizardUI()
         {
             Step1Panel.Visibility = currentStep == 1 ? Visibility.Visible : Visibility.Collapsed;
@@ -250,13 +297,8 @@ namespace TravelAgency.WPF.Views
             Step5Panel.Visibility = currentStep == 5 ? Visibility.Visible : Visibility.Collapsed;
 
             BackButton.IsEnabled = currentStep > 1;
+            NextButton.Content = currentStep == 5 ? "Finish" : "Next";
 
-            if (currentStep == 5)
-                NextButton.Content = "Finish";
-            else
-                NextButton.Content = "Next";
-
-            // Step 1 style
             if (currentStep == 1)
             {
                 Step1Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
@@ -270,7 +312,6 @@ namespace TravelAgency.WPF.Views
                 Step1Label.FontWeight = FontWeights.Normal;
             }
 
-            // Step 2 style
             if (currentStep == 2)
             {
                 Step2Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
@@ -283,7 +324,7 @@ namespace TravelAgency.WPF.Views
                 Step2Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
                 Step2Label.FontWeight = FontWeights.Normal;
             }
-            // Step 3 style
+
             if (currentStep == 3)
             {
                 Step3Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
@@ -296,7 +337,7 @@ namespace TravelAgency.WPF.Views
                 Step3Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
                 Step3Label.FontWeight = FontWeights.Normal;
             }
-            // Step 4 style
+
             if (currentStep == 4)
             {
                 Step4Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
@@ -309,7 +350,7 @@ namespace TravelAgency.WPF.Views
                 Step4Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
                 Step4Label.FontWeight = FontWeights.Normal;
             }
-            // Step 5 style
+
             if (currentStep == 5)
             {
                 Step5Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
@@ -366,12 +407,14 @@ namespace TravelAgency.WPF.Views
 
             decimal compositePrice = GetCompositeServicesPrice();
 
-            double finalPrice = (double)_facade.CalculateFinalPrice(
+            decimal final = CalculatePriceWithStrategy(
                 (decimal)basePrice,
                 (decimal)discount,
                 (decimal)vat,
                 (decimal)extraCharges,
                 compositePrice);
+
+            double finalPrice = (double)final;
 
             ReviewBasePriceText.Text = $"{basePrice:F2}";
             ReviewDiscountText.Text = $"{discount:F2}%";
@@ -404,28 +447,6 @@ namespace TravelAgency.WPF.Views
             return services.Count == 0 ? "-" : string.Join(", ", services);
         }
 
-        private static double ParseDoubleOrZero(string text)
-        {
-            if (double.TryParse(text, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out double value))
-                return value;
-
-            if (double.TryParse(text, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.CurrentCulture, out value))
-                return value;
-
-            return 0;
-        }
-        private static decimal ParseDecimal(string text)
-        {
-            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal value))
-                return value;
-
-            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value))
-                return value;
-
-            return 0m;
-        }
         private void UpdateLeftPreview()
         {
             string destination = GetSafeText(DestinationComboBox.Text);
@@ -439,10 +460,9 @@ namespace TravelAgency.WPF.Views
             decimal discount = ParseDecimal(DiscountTextBox.Text);
             decimal vat = ParseDecimal(VatTextBox.Text);
             decimal extraCharges = ParseDecimal(ExtraChargesTextBox.Text);
-
             decimal compositePrice = GetCompositeServicesPrice();
 
-            decimal finalPrice = _facade.CalculateFinalPrice(
+            decimal finalPrice = CalculatePriceWithStrategy(
                 basePrice,
                 discount,
                 vat,
@@ -458,8 +478,6 @@ namespace TravelAgency.WPF.Views
 
             PreviewPriceText.Text = $"{finalPrice:F2}";
         }
-
-        private bool _isLoading;
 
         private void LoadTripIntoForm()
         {
@@ -486,8 +504,6 @@ namespace TravelAgency.WPF.Views
             DestinationComboBox.Text = _editingTrip.Destination;
             CountryTextBox.Text = _editingTrip.Country;
 
-            // Fallback for older/quick-created packages where destination/country weren't persisted,
-            // but SeasonName was generated like "Paris, France trip".
             if (string.IsNullOrWhiteSpace(DestinationComboBox.Text) || string.IsNullOrWhiteSpace(CountryTextBox.Text))
             {
                 var (dest, country) = InferDestinationCountryFromSeason(_editingTrip.Season?.Name);
@@ -640,7 +656,6 @@ namespace TravelAgency.WPF.Views
             if (string.IsNullOrWhiteSpace(seasonName))
                 return ("", "");
 
-            // Example: "Paris, France trip"
             var name = seasonName.Trim();
             if (name.EndsWith("trip", StringComparison.OrdinalIgnoreCase))
                 name = name[..^3].Trim();
@@ -675,6 +690,7 @@ namespace TravelAgency.WPF.Views
             if (currentStep == 5)
                 UpdateReviewPanel();
         }
+
         private async void SearchHotelsButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -715,7 +731,8 @@ namespace TravelAgency.WPF.Views
 
                 if (_hotelResults.Count == 0)
                 {
-                    MessageBox.Show("No hotels found for the selected destination and dates.",
+                    MessageBox.Show(
+                        "No hotels found for the selected destination and dates.",
                         "Hotel Search",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
@@ -731,6 +748,7 @@ namespace TravelAgency.WPF.Views
                 SearchHotelsButton.Content = "Search Hotels";
             }
         }
+
         private void HotelsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (HotelsListBox.SelectedItem is not HotelSearchOption selectedHotel)
@@ -767,6 +785,7 @@ namespace TravelAgency.WPF.Views
             if (currentStep == 5)
                 UpdateReviewPanel();
         }
+
         private async void DestinationComboBox_KeyUp(object sender, KeyEventArgs e)
         {
             try
@@ -799,13 +818,13 @@ namespace TravelAgency.WPF.Views
             }
             catch (TaskCanceledException)
             {
-                // normal, user continues typing
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Location Search Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+
         private void DestinationComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (DestinationComboBox.SelectedItem is LocationOption selectedLocation)
@@ -825,33 +844,21 @@ namespace TravelAgency.WPF.Views
         {
             if (_isLoading)
                 return;
+
             decimal basePrice = ParseDecimal(BasePriceTextBox.Text);
             decimal discount = ParseDecimal(DiscountTextBox.Text);
-            decimal vat = ParseDecimal(VatTextBox.Text);
             decimal extra = ParseDecimal(ExtraChargesTextBox.Text);
+            decimal vat = ParseDecimal(VatTextBox.Text);
 
-            // ===== Composite =====
-            decimal compositePrice = 0m;
+            decimal compositePrice = GetCompositeServicesPrice();
 
-            if (AirportTransferCheckBox.IsChecked == true)
-                compositePrice += 30;
-
-            if (TravelInsuranceCheckBox.IsChecked == true)
-                compositePrice += 20;
-
-            if (TourGuideCheckBox.IsChecked == true)
-                compositePrice += 40;
-
-            if (FreeCancellationCheckBox.IsChecked == true)
-                compositePrice += 25;
-
-            // ===== calcul final =====
-            decimal finalPrice = _facade.CalculateFinalPrice(
+            decimal finalPrice = CalculatePriceWithStrategy(
                 basePrice,
                 discount,
                 vat,
                 extra,
                 compositePrice);
+
             EstimatedFinalPriceText.Text = $"€ {finalPrice:F2}";
 
             UpdateLeftPreview();

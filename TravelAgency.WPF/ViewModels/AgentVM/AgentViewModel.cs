@@ -302,7 +302,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 var builder = new Core.Patterns.Builders.TripPackageBuilder();
                 var director = new Core.Patterns.Builders.TripDirector(builder);
 
-                var trip = director.Make(request);
+                var trip = director.Build(request);
 
                 
 

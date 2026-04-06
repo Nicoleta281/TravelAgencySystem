@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TravelAgency.Core.Patterns.Adapters.GeoDb;
-using TravelAgency.Core.Patterns.Adapters.SerpApi;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
-using TravelAgency.Core.Services;
+using TravelAgency.Core.Patterns.Adapters;
+using TravelAgency.Core.Patterns.Adapters.GeoDb;
+using TravelAgency.Core.Patterns.Adapters.SerpApi;
+using TravelAgency.Core.Patterns.Builders;
 
 namespace TravelAgency.Core.Patterns.Facades
 {
@@ -16,62 +17,96 @@ namespace TravelAgency.Core.Patterns.Facades
     {
         private readonly ILocationSearchProvider _locationProvider;
         private readonly IHotelSearchProvider _hotelProvider;
-        private readonly TripCreationService _tripCreationService;
-        private readonly ITripPackageRepository _repository;
+        private readonly ITripPackageRepository _tripRepository;
+        private readonly ITripPackageBuilder _tripBuilder;
+        private readonly TripDirector _tripDirector;
 
         public TravelPackageFacade()
         {
             _locationProvider = new GeoDbLocationAdapter();
             _hotelProvider = new SerpApiHotelAdapter();
-            _tripCreationService = new TripCreationService();
-            _repository = new EfTripPackageRepository();
+            _tripRepository = new EfTripPackageRepository();
+
+            _tripBuilder = new TripPackageBuilder();
+            _tripDirector = new TripDirector(_tripBuilder);
         }
 
-        public async Task<List<LocationOption>> SearchLocationsAsync(string query, int limit = 10)
+        public TravelPackageFacade(
+            ILocationSearchProvider locationProvider,
+            IHotelSearchProvider hotelProvider,
+            ITripPackageRepository tripRepository,
+            ITripPackageBuilder tripBuilder)
         {
-            return await _locationProvider.SearchLocationsAsync(query, limit);
+            _locationProvider = locationProvider;
+            _hotelProvider = hotelProvider;
+            _tripRepository = tripRepository;
+            _tripBuilder = tripBuilder;
+            _tripDirector = new TripDirector(_tripBuilder);
+        }
+
+        public async Task<List<LocationOption>> SearchLocationsAsync(string query, int maxResults = 10)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return new List<LocationOption>();
+
+            return await _locationProvider.SearchLocationsAsync(query, maxResults);
         }
 
         public async Task<List<HotelSearchOption>> SearchHotelsAsync(
             string destination,
             DateTime checkIn,
             DateTime checkOut,
-            int adults)
+            int adults = 2)
         {
+            if (string.IsNullOrWhiteSpace(destination))
+                return new List<HotelSearchOption>();
+
+            if (checkOut <= checkIn)
+                throw new InvalidOperationException("Check-out date must be after check-in date.");
+
             return await _hotelProvider.SearchHotelsAsync(destination, checkIn, checkOut, adults);
-        }
-
-        public decimal CalculateFinalPrice(
-            decimal basePrice,
-            decimal discount,
-            decimal vat,
-            decimal extraCharges,
-            decimal compositePrice)
-        {
-            decimal priceAfterDiscount = basePrice * (1 - discount / 100);
-            decimal priceWithVat = priceAfterDiscount * (1 + vat / 100);
-
-            return priceWithVat + extraCharges + compositePrice;
         }
 
         public TripPackage CreatePackage(TripRequest request)
         {
-            return _tripCreationService.CreateTrip(request);
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            return _tripDirector.Build(request);
         }
 
         public TripPackage CreateAndSavePackage(TripRequest request)
         {
-            var trip = _tripCreationService.CreateTrip(request);
-            _repository.Add(trip);
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            var trip = _tripDirector.Build(request);
+            _tripRepository.Add(trip);
+
             return trip;
         }
 
-        public TripPackage CreateAndUpdatePackage(TripRequest request, int tripId)
+        public TripPackage CreateAndUpdatePackage(TripRequest request, int existingId)
         {
-            var trip = _tripCreationService.CreateTrip(request);
-            trip.Id = tripId;
-            _repository.Update(trip);
-            return trip;
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            var updatedTrip = _tripDirector.Build(request);
+            updatedTrip.Id = existingId;
+
+            _tripRepository.Update(updatedTrip);
+
+            return updatedTrip;
+        }
+
+        public void DeletePackage(int id)
+        {
+            _tripRepository.Delete(id);
+        }
+
+        public IEnumerable<TripPackage> GetAllPackages()
+        {
+            return _tripRepository.GetAll();
         }
     }
 }

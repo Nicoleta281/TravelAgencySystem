@@ -18,7 +18,7 @@ namespace TravelAgency.Core.Patterns.Builders
             _builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
 
-        public TripPackage Make(TripRequest request)
+        public TripPackage Build(TripRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));

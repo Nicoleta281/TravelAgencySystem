@@ -31,7 +31,7 @@ namespace TravelAgency.Core.Services
             var builder = new TripPackageBuilder();
             var director = new TripDirector(builder);
 
-            var trip = director.Make(request);
+            var trip = director.Build(request);
 
             // completare explicita a campurilor non-flyweight
             trip.Name = request.PackageName ?? "";
