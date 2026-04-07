@@ -7,17 +7,19 @@ using System.Windows.Input;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models;
-using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
 
 namespace TravelAgency.WPF.ViewModels.AgentVM
 {
-    public class AgentViewModel : ViewModelBase
+    public class AgentViewModel : ViewModelBase, IBookingObserver
     {
+        private readonly BookingNotificationService _notificationService;
+        private readonly BookingService _realBookingService;
         private readonly ITripPackageRepository _repo;
         private readonly TripCreationService _tripCreationService;
         private readonly IBookingAccessService _bookingService;
@@ -192,6 +194,14 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             var bookingRepository = new EfBookingRepository();
             var realBookingService = new BookingAccessService(bookingRepository);
             _bookingService = new BookingAccessProxy(realBookingService, currentUser);
+          
+
+            _notificationService = BookingNotificationService.Instance;
+
+            _realBookingService = new BookingService(bookingRepository, BookingNotificationService.Instance);
+
+            _notificationService.Attach(this);
+
             _userRepository = new EfUserRepository();
             LogoutCommand = new RelayCommand(Logout);
 
@@ -473,7 +483,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             RefreshReportPreview();
         }
 
-        private void ApproveSelectedBooking()
+        private async void ApproveSelectedBooking()
         {
             if (SelectedBooking == null)
             {
@@ -484,12 +494,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 return;
             }
 
-            _bookingService.ApproveBooking(SelectedBooking);
-            LoadPendingBookings();
-            LoadAllBookings();
+            var bookingToApprove = SelectedBooking;
+            bookingToApprove.IsBeingRemoved = true;
 
-            LoadPendingBookings();
+            await Task.Delay(350);
 
+            _realBookingService.ConfirmBooking(bookingToApprove);
+            SelectedBooking = null;
 
             MessageBox.Show("Booking request approved successfully.",
                             "Approve Booking",
@@ -497,7 +508,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                             MessageBoxImage.Information);
         }
 
-        private void RejectSelectedBooking()
+        private async void RejectSelectedBooking()
         {
             if (SelectedBooking == null)
             {
@@ -508,16 +519,20 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 return;
             }
 
-            _bookingService.RejectBooking(SelectedBooking);
+            var bookingToReject = SelectedBooking;
+            bookingToReject.IsBeingRemoved = true;
 
-            LoadPendingBookings();
-            LoadAllBookings();
+            await Task.Delay(350);
+
+            _realBookingService.RejectBooking(bookingToReject);
+            SelectedBooking = null;
 
             MessageBox.Show("Booking request rejected successfully.",
                             "Reject Booking",
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
         }
+
         private Visibility _packagesVisibility = Visibility.Visible;
         public Visibility PackagesVisibility
         {
@@ -601,6 +616,35 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             {
                 ReportPreviewBookings.Add(booking);
             }
+        }
+
+        public void Update(BookingStatusChangedEvent bookingEvent)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // scoate din Pending dacă nu mai e Pending
+                if (!string.Equals(bookingEvent.NewStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    var toRemove = PendingBookings
+                        .FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
+
+                    if (toRemove != null)
+                        PendingBookings.Remove(toRemove);
+                }
+
+                // actualizeaza în AllBookings
+                var existing = AllBookings
+                    .FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
+
+                if (existing != null)
+                {
+                    AllBookings.Remove(existing);
+                }
+
+                AllBookings.Insert(0, bookingEvent.Booking);
+
+                RefreshReportPreview();
+            });
         }
 
 
