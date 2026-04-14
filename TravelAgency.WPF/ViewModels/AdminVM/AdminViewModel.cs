@@ -1,8 +1,12 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using TravelAgency.Core.Data;
+using TravelAgency.Core.Data.Mappers;
 using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Models.Analytics;
 using TravelAgency.Core.Models.Users.Access;
+using TravelAgency.Core.Patterns.Memento;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Commands.Admin;
@@ -29,7 +33,33 @@ namespace TravelAgency.WPF.ViewModels.AdminVM
         public ObservableCollection<ModerationPackageViewModel> PendingPackages { get; set; }
         public ObservableCollection<string> AvailableCurrencies { get; set; }
         private readonly IUserRepository _userRepository;
+        private readonly IAdminAnalyticsSnapshotRepository _snapshotRepository;
+        private readonly IBookingRepository _bookingRepository;
 
+        private AdminAnalyticsState _liveAnalytics = new();
+        public AdminAnalyticsState LiveAnalytics
+        {
+            get => _liveAnalytics;
+            set => Set(ref _liveAnalytics, value);
+        }
+
+        public ObservableCollection<AdminAnalyticsMemento> AnalyticsSnapshots { get; set; } = new();
+
+        private AdminAnalyticsMemento? _selectedSnapshot;
+        public bool HasSelectedSnapshot => SelectedSnapshot != null;
+        public AdminAnalyticsMemento? SelectedSnapshot
+        {
+            get => _selectedSnapshot;
+            set
+            {
+                Set(ref _selectedSnapshot, value);
+
+                OnPropertyChanged(nameof(HasSelectedSnapshot));
+
+                if (RestoreAnalyticsSnapshotCommand is RelayCommand cmd)
+                    cmd.RaiseCanExecuteChanged();
+            }
+        }
         public int TotalUsersCount
         {
             get => _totalUsersCount;
@@ -106,11 +136,16 @@ namespace TravelAgency.WPF.ViewModels.AdminVM
         public ICommand SaveFinancialSettingsCommand { get; }
         public ICommand RefreshDashboardCommand { get; }
         public ICommand LogoutCommand { get; }
+        public ICommand SaveAnalyticsSnapshotCommand { get; }
+        public ICommand RestoreAnalyticsSnapshotCommand { get; }
+        public ICommand ShowDashboardCommand { get; }
+        public ICommand ShowAnalyticsCommand { get; }
 
         public AdminViewModel()
         {
             _userRepository = new EfUserRepository();
-
+            _snapshotRepository = new EfAdminAnalyticsSnapshotRepository(TravelAgencyDbContextFactory.Create());
+            _bookingRepository = new EfBookingRepository();
             Users = new ObservableCollection<AdminUserRowViewModel>();
             PendingPackages = new ObservableCollection<ModerationPackageViewModel>();
             AvailableCurrencies = new ObservableCollection<string> { "USD", "EUR", "MDL" };
@@ -123,10 +158,50 @@ namespace TravelAgency.WPF.ViewModels.AdminVM
             SaveFinancialSettingsCommand = new RelayCommand(SaveFinancialSettings);
             RefreshDashboardCommand = new RelayCommand(LoadDataFromDatabase);
             LogoutCommand = new RelayCommand(Logout);
+            SaveAnalyticsSnapshotCommand = new RelayCommand(() => SaveAnalyticsSnapshot());
+           
+            RestoreAnalyticsSnapshotCommand = new RelayCommand(
+                () => RestoreAnalyticsSnapshot(),
+                () => SelectedSnapshot != null
+            );
 
+            ShowDashboardCommand = new RelayCommand(() => ShowDashboard());
+            ShowAnalyticsCommand = new RelayCommand(() => ShowAnalytics());
             LoadDataFromDatabase();
+            LoadLiveAnalytics();
+            LoadAnalyticsSnapshotsFromDatabase();
+        }
+        private void RestoreAnalyticsSnapshot()
+        {
+            if (SelectedSnapshot == null)
+                return;
+
+            LiveAnalytics.Restore(SelectedSnapshot);
+
+            OnPropertyChanged(nameof(LiveAnalytics));
+            OnPropertyChanged(nameof(TotalBookingsText));
+            OnPropertyChanged(nameof(ConfirmedBookingsText));
+            OnPropertyChanged(nameof(RejectedBookingsText));
+            OnPropertyChanged(nameof(TotalRevenueText));
+            OnPropertyChanged(nameof(TotalUsersText));
+            OnPropertyChanged(nameof(TopDestinationText));
         }
 
+        private string _currentSection = "Dashboard";
+        public string CurrentSection
+        {
+            get => _currentSection;
+            set
+            {
+                Set(ref _currentSection, value);
+
+                OnPropertyChanged(nameof(IsDashboardSection));
+                OnPropertyChanged(nameof(IsAnalyticsSection));
+            }
+        }
+
+        public bool IsDashboardSection => CurrentSection == "Dashboard";
+        public bool IsAnalyticsSection => CurrentSection == "Analytics";
         private void LoadDataFromDatabase()
         {
             Users.Clear();
@@ -344,6 +419,82 @@ namespace TravelAgency.WPF.ViewModels.AdminVM
 
             if (RejectPackageCommand is RelayCommand rejectCmd)
                 rejectCmd.RaiseCanExecuteChanged();
+        }
+        public string TotalBookingsText => LiveAnalytics.TotalBookings.ToString();
+        public string ConfirmedBookingsText => LiveAnalytics.ConfirmedBookings.ToString();
+        public string RejectedBookingsText => LiveAnalytics.RejectedBookings.ToString();
+        public string TotalRevenueText => $"{LiveAnalytics.TotalRevenue:F2} €";
+        public string TotalUsersText => LiveAnalytics.TotalUsers.ToString();
+        public string TopDestinationText => LiveAnalytics.TopDestination;
+        private void LoadLiveAnalytics()
+        {
+            var bookings = _bookingRepository.GetAll();
+
+            LiveAnalytics.TotalBookings = bookings.Count;
+            LiveAnalytics.ConfirmedBookings = bookings.Count(b => b.StatusName == "Confirmed");
+            LiveAnalytics.RejectedBookings = bookings.Count(b => b.StatusName == "Rejected");
+
+            LiveAnalytics.TotalRevenue = bookings
+                .Where(b => b.StatusName == "Confirmed")
+                .Sum(b => b.TotalPrice);
+
+            LiveAnalytics.TopDestination = bookings
+                .Where(b => b.TripPackage != null)
+                .GroupBy(b => b.TripPackage.Name)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .FirstOrDefault() ?? "N/A";
+
+            var users = _userRepository.GetAll();
+
+            LiveAnalytics.TotalUsers = users.Count;
+         
+            OnPropertyChanged(nameof(LiveAnalytics));
+            OnPropertyChanged(nameof(TotalBookingsText));
+            OnPropertyChanged(nameof(ConfirmedBookingsText));
+            OnPropertyChanged(nameof(RejectedBookingsText));
+            OnPropertyChanged(nameof(TotalRevenueText));
+            OnPropertyChanged(nameof(TotalUsersText));
+            OnPropertyChanged(nameof(TopDestinationText));
+        }
+        private void SaveAnalyticsSnapshot()
+        {
+            LoadDataFromDatabase();
+            LoadLiveAnalytics();
+
+            var snapshot = LiveAnalytics.Save();
+
+            var entity = AdminAnalyticsSnapshotMapper.ToEntity(
+                snapshot,
+                ActiveUsersCount,
+                BlockedUsersCount);
+
+            _snapshotRepository.Add(entity);
+
+            LoadAnalyticsSnapshotsFromDatabase();
+        }
+
+        private void LoadAnalyticsSnapshotsFromDatabase()
+        {
+            AnalyticsSnapshots.Clear();
+
+            var entities = _snapshotRepository.GetAll();
+
+            foreach (var entity in entities)
+            {
+                var memento = AdminAnalyticsSnapshotMapper.ToMemento(entity);
+                AnalyticsSnapshots.Add(memento);
+            }
+        }
+
+        private void ShowDashboard()
+        {
+            CurrentSection = "Dashboard";
+        }
+
+        private void ShowAnalytics()
+        {
+            CurrentSection = "Analytics";
         }
 
         private void Logout()

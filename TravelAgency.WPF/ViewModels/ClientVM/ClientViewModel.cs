@@ -11,14 +11,16 @@ using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Patterns.Decorator;
 using TravelAgency.Core.Patterns.Flyweight;
+using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
+using TravelAgency.Core.Patterns.Observer;
 
 namespace TravelAgency.WPF.ViewModels.ClientVM
 {
-    public class ClientViewModel : INotifyPropertyChanged
+    public class ClientViewModel : INotifyPropertyChanged, IBookingObserver
     {
         private TripPackage? _selectedPackage;
         private double _basePrice;
@@ -29,7 +31,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         private readonly IBookingAccessService _bookingService;
         private readonly string _currentClientUsername;
         private readonly IUserRepository _userRepository;
-
+        private readonly BookingNotificationService _notificationService;
+        private readonly IBookingRepository _bookingRepository;
         public Visibility PackagesVisibility
         {
             get => _packagesVisibility;
@@ -128,6 +131,10 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 new BookingAccessService(new EfBookingRepository()),
                 currentUser);
             _userRepository = new EfUserRepository();
+            _notificationService = BookingNotificationService.Instance;
+            _notificationService.Attach(this);
+
+            _bookingRepository = new EfBookingRepository();
             LogoutCommand = new RelayCommand(Logout);
 
             _currentClientUsername = currentUser.Username ?? "";
@@ -365,7 +372,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 validator.ValidateAndThrow(booking);
 
                 _bookingService.SubmitBooking(booking);
-                LoadMyBookings();
+              
 
                 MessageBox.Show(
                     $"Request submitted successfully!\n\nTrip: {SelectedPackage.Name}\nTotal: € {finalPrice:F2}\nStatus: Pending",
@@ -400,7 +407,32 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 MyBookings.Add(booking);
             }
         }
+        public void Cleanup()
+        {
+            _notificationService.Detach(this);
+        }
+        public void Update(BookingStatusChangedEvent bookingEvent)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // filtrăm DOAR booking-urile clientului curent
+                if (bookingEvent.Booking.Client?.Username != _currentClientUsername)
+                    return;
 
+                // găsim booking-ul în listă
+                var existing = MyBookings
+                    .FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
+
+                if (existing != null)
+                {
+                    // înlocuim booking-ul vechi
+                    MyBookings.Remove(existing);
+                }
+
+                // adăugăm versiunea nouă (cu status updated)
+                MyBookings.Insert(0, bookingEvent.Booking);
+            });
+        }
         private void Logout()
         {
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser;

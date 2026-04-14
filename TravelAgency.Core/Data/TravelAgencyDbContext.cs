@@ -7,7 +7,7 @@ namespace TravelAgency.Core.Data
     {
         public DbSet<TripPackageEntity> TripPackages => Set<TripPackageEntity>();
         public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
-
+        public DbSet<AdminAnalyticsSnapshotEntity> AdminAnalyticsSnapshots { get; set; }
         public DbSet<UserEntity> Users => Set<UserEntity>();
 
         public TravelAgencyDbContext(DbContextOptions<TravelAgencyDbContext> options)
@@ -47,6 +47,17 @@ namespace TravelAgency.Core.Data
                 e.Property(x => x.RoleName).IsRequired();
 
                 e.HasIndex(x => x.Username).IsUnique();
+            });
+            modelBuilder.Entity<AdminAnalyticsSnapshotEntity>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.TopDestination)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(x => x.SavedAt)
+                      .IsRequired();
             });
         }
     }

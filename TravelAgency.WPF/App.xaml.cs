@@ -16,7 +16,7 @@ namespace TravelAgency.WPF
 
             using (var db = TravelAgencyDbContextFactory.Create())
             {
-                db.Database.Migrate();
+              db.Database.Migrate();
             }
 
             var userRepository = new EfUserRepository();
