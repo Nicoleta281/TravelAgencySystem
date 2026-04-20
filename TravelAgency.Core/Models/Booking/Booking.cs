@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.Users;
+using TravelAgency.Core.Patterns.State;
 
 namespace TravelAgency.Core.Models.Booking
 {
     public class Booking : INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler? PropertyChanged;
+        private IBookingState _state = new PendingBookingState();
 
         public int Id { get; set; }
 
@@ -19,9 +19,9 @@ namespace TravelAgency.Core.Models.Booking
 
         public TripPackage? TripPackage { get; set; }
 
-        public BookingStatus? Status { get; private set; }
+        public BookingStatus? Status { get; private set; } = new BookingStatus { Name = "Pending" };
 
-        public string StatusName => Status?.Name ?? "";
+        public string StatusName => _state.Name;
 
         public List<string> SelectedExtras { get; set; } = new();
 
@@ -29,56 +29,58 @@ namespace TravelAgency.Core.Models.Booking
 
         public double TotalPrice { get; set; }
 
-        private bool _isBeingRemoved;
-        public bool IsBeingRemoved
+        public bool IsBeingRemoved { get; set; }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public void SetState(IBookingState state)
         {
-            get => _isBeingRemoved;
-            set
-            {
-                if (_isBeingRemoved != value)
-                {
-                    _isBeingRemoved = value;
-                    OnPropertyChanged();
-                }
-            }
+            _state = state;
+            Status = new BookingStatus { Name = state.Name };
+            OnPropertyChanged(nameof(Status));
+            OnPropertyChanged(nameof(StatusName));
         }
 
         public void SubmitRequest()
         {
-            Status = new BookingStatus { Name = "Pending" };
-            OnPropertyChanged(nameof(Status));
-            OnPropertyChanged(nameof(StatusName));
+            SetState(new PendingBookingState());
         }
 
         public void ConfirmBooking()
         {
-            Status = new BookingStatus { Name = "Confirmed" };
-            OnPropertyChanged(nameof(Status));
-            OnPropertyChanged(nameof(StatusName));
+            _state.Confirm(this);
         }
 
         public void RejectBooking()
         {
-            Status = new BookingStatus { Name = "Rejected" };
-            OnPropertyChanged(nameof(Status));
-            OnPropertyChanged(nameof(StatusName));
+            _state.Reject(this);
         }
 
         public void CancelBooking()
         {
-            Status = new BookingStatus { Name = "Cancelled" };
-            OnPropertyChanged(nameof(Status));
-            OnPropertyChanged(nameof(StatusName));
+            _state.Cancel(this);
         }
 
-        public void ChangeStatus(BookingStatus status)
+        public void RestoreStateFromStatusName(string? statusName)
         {
-            Status = status;
-            OnPropertyChanged(nameof(Status));
-            OnPropertyChanged(nameof(StatusName));
+            switch (statusName)
+            {
+                case "Confirmed":
+                    SetState(new ConfirmedBookingState());
+                    break;
+                case "Rejected":
+                    SetState(new RejectedBookingState());
+                    break;
+                case "Cancelled":
+                    SetState(new CancelledBookingState());
+                    break;
+                default:
+                    SetState(new PendingBookingState());
+                    break;
+            }
         }
 
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

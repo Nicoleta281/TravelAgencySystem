@@ -9,6 +9,8 @@ using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
 using TravelAgency.Core.Models.TripPkg.Package;
+using TravelAgency.Core.Patterns.ChainOfResponsibility;
+using TravelAgency.Core.Patterns.Iterator;
 using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
@@ -25,7 +27,10 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         private readonly IBookingAccessService _bookingService;
         private readonly AgentReportService _reportService = new();
         private Booking? _selectedBooking;
+        private string _currentBookingFilter = "All";
         private readonly IUserRepository _userRepository;
+        private readonly IBookingRepository _bookingRepository;
+        private readonly IBookingApprovalHandler _bookingApprovalChain;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
         public ObservableCollection<Booking> PendingBookings { get; set; }
@@ -39,6 +44,12 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
     "Confirmed Bookings",
     "Rejected Bookings"
 };
+        private ObservableCollection<Booking> _agentBookings = new();
+        public ObservableCollection<Booking> AgentBookings
+        {
+            get => _agentBookings;
+            set => Set(ref _agentBookings, value);
+        }
 
         public ObservableCollection<string> ExportFormats { get; } = new()
 {
@@ -155,18 +166,29 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand ShowBookingsCommand { get; }
         public ICommand GenerateReportCommand { get; }
 
+        public ICommand ShowAllBookingsCommand { get; }
+        public ICommand ShowPendingBookingsCommand { get; }
+        public ICommand ShowConfirmedBookingsCommand { get; }
+        public ICommand ShowDashboardCommand { get; }
+        public ICommand ShowRejectedBookingsCommand { get; }
+
 
         public AgentViewModel()
-            : this(new EfTripPackageRepository(), new TripCreationService())
+           : this(new EfTripPackageRepository(), new TripCreationService(), new EfBookingRepository())
         {
         }
 
 
 
-        public AgentViewModel(ITripPackageRepository repo, TripCreationService tripCreationService)
+        public AgentViewModel(
+            ITripPackageRepository repo,
+            TripCreationService tripCreationService,
+            IBookingRepository bookingRepository)
         {
             _repo = repo;
             _tripCreationService = tripCreationService;
+            _bookingRepository = bookingRepository;
+            _bookingApprovalChain = BuildBookingApprovalChain();
 
             TripsView = CollectionViewSource.GetDefaultView(Trips);
             TripsView.Filter = FilterTrips;
@@ -181,38 +203,47 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             ShowPackagesCommand = new RelayCommand(ShowPackages);
             ShowBookingsCommand = new RelayCommand(ShowBookings);
             GenerateReportCommand = new RelayCommand(GenerateReport);
-
             LogoutCommand = new RelayCommand(Logout);
 
+            IsDashboardVisible = true;
+            IsPackagesVisible = false;
+            IsBookingsVisible = false;
+            IsReportsVisible = false;
+
             Trips.CollectionChanged += (_, __) => RefreshStats();
+
             using (var db = TravelAgencyDbContextFactory.Create())
                 db.Database.Migrate();
 
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
-     ?? throw new InvalidOperationException("User not authenticated.");
+                ?? throw new InvalidOperationException("User not authenticated.");
 
-            var bookingRepository = new EfBookingRepository();
-            var realBookingService = new BookingAccessService(bookingRepository);
-            _bookingService = new BookingAccessProxy(realBookingService, currentUser);
-          
+            var realBookingAccessService = new BookingAccessService(_bookingRepository);
+            _bookingService = new BookingAccessProxy(realBookingAccessService, currentUser);
 
             _notificationService = BookingNotificationService.Instance;
-
-            _realBookingService = new BookingService(bookingRepository, BookingNotificationService.Instance);
+            _realBookingService = new BookingService(_bookingRepository, BookingNotificationService.Instance);
 
             _notificationService.Attach(this);
 
             _userRepository = new EfUserRepository();
-            LogoutCommand = new RelayCommand(Logout);
 
             PendingBookings = new ObservableCollection<Booking>();
 
             ApproveBookingCommand = new RelayCommand(ApproveSelectedBooking);
             RejectBookingCommand = new RelayCommand(RejectSelectedBooking);
-            RefreshPendingBookingsCommand = new RelayCommand(LoadPendingBookings);
 
-            LoadPendingBookings();
+            RefreshPendingBookingsCommand = new RelayCommand(LoadPendingRequests);
+
+            ShowAllBookingsCommand = new RelayCommand(LoadAllBookings);
+            ShowPendingBookingsCommand = new RelayCommand(LoadPendingBookings);
+            ShowConfirmedBookingsCommand = new RelayCommand(LoadConfirmedBookings);
+            ShowDashboardCommand = new RelayCommand(ShowPackages);
+            ShowRejectedBookingsCommand = new RelayCommand(LoadRejectedBookings);
+
+            LoadPendingRequests();
             LoadTrips();
+            LoadReportBookings();
             LoadAllBookings();
         }
         private void LoadTrips()
@@ -229,7 +260,95 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             TripsView.Refresh();
             Status = $"Loaded {Trips.Count} trips from database.";
         }
+        private void LoadBookings()
+        {
+            var bookings = _bookingRepository.GetAll().ToList();
 
+            var bookingCollection = new BookingCollection(bookings);
+            var iterator = bookingCollection.CreateAllIterator();
+
+            var result = new List<Booking>();
+
+            while (iterator.HasNext())
+            {
+                result.Add(iterator.Next());
+            }
+
+            AgentBookings = new ObservableCollection<Booking>(result);
+        }
+
+  
+        private void LoadBookingsFromIterator(IIterator<Booking> iterator)
+        {
+            var result = new List<Booking>();
+
+            while (iterator.HasNext())
+            {
+                result.Add(iterator.Next());
+            }
+
+            AgentBookings = new ObservableCollection<Booking>(result);
+        }
+        private void LoadAllBookings()
+        {
+            _currentBookingFilter = "All";
+
+            var bookings = _bookingRepository.GetAll().ToList();
+            var bookingCollection = new BookingCollection(bookings);
+            var iterator = bookingCollection.CreateAllIterator();
+
+            LoadBookingsFromIterator(iterator);
+        }
+
+        private void LoadPendingBookings()
+        {
+            _currentBookingFilter = "Pending";
+
+            var bookings = _bookingRepository.GetAll().ToList();
+            var bookingCollection = new BookingCollection(bookings);
+            var iterator = bookingCollection.CreatePendingIterator();
+
+            LoadBookingsFromIterator(iterator);
+        }
+
+        private void LoadConfirmedBookings()
+        {
+            _currentBookingFilter = "Confirmed";
+
+            var bookings = _bookingRepository.GetAll().ToList();
+            var bookingCollection = new BookingCollection(bookings);
+            var iterator = bookingCollection.CreateConfirmedIterator();
+
+            LoadBookingsFromIterator(iterator);
+        }
+
+        private void LoadRejectedBookings()
+        {
+            _currentBookingFilter = "Rejected";
+
+            var bookings = _bookingRepository.GetAll().ToList();
+            var bookingCollection = new BookingCollection(bookings);
+            var iterator = bookingCollection.CreateRejectedIterator();
+
+            LoadBookingsFromIterator(iterator);
+        }
+
+        private IBookingApprovalHandler BuildBookingApprovalChain()
+        {
+            var clientHandler = new ClientExistsHandler();
+            var tripHandler = new TripExistsHandler();
+            var statusHandler = new BookingStatusPendingHandler();
+            var seatsHandler = new SeatsAvailableHandler();
+            var priceHandler = new PriceValidationHandler();
+
+            clientHandler
+                .SetNext(tripHandler)
+                .SetNext(statusHandler)
+                .SetNext(seatsHandler)
+                .SetNext(priceHandler);
+
+            return clientHandler;
+        }
         private void CreateQuick()
         {
             try
@@ -456,7 +575,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             }
         }
 
-        private void LoadPendingBookings()
+        private void LoadPendingRequests()
         {
             PendingBookings.Clear();
 
@@ -468,12 +587,11 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             }
         }
 
-        private void LoadAllBookings()
+        private void LoadReportBookings()
         {
             AllBookings.Clear();
 
-            var bookingRepository = new EfBookingRepository();
-            var allBookings = bookingRepository.GetAll();
+            var allBookings = _bookingRepository.GetAll();
 
             foreach (var booking in allBookings)
             {
@@ -494,18 +612,40 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 return;
             }
 
-            var bookingToApprove = SelectedBooking;
-            bookingToApprove.IsBeingRemoved = true;
+            var context = new BookingApprovalContext(SelectedBooking);
+            var approvalResult = _bookingApprovalChain.Handle(context);
 
-            await Task.Delay(350);
+            if (!approvalResult.IsApproved)
+            {
+                MessageBox.Show(approvalResult.Message,
+                                "Approval Blocked",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                return;
+            }
 
-            _realBookingService.ConfirmBooking(bookingToApprove);
-            SelectedBooking = null;
+            try
+            {
+                var bookingToApprove = SelectedBooking;
+                bookingToApprove.IsBeingRemoved = true;
 
-            MessageBox.Show("Booking request approved successfully.",
-                            "Approve Booking",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
+                await Task.Delay(350);
+
+                _realBookingService.ConfirmBooking(bookingToApprove);
+                SelectedBooking = null;
+
+                MessageBox.Show("Booking request approved successfully.",
+                                "Approve Booking",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message,
+                                "State Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+            }
         }
 
         private async void RejectSelectedBooking()
@@ -519,18 +659,28 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 return;
             }
 
-            var bookingToReject = SelectedBooking;
-            bookingToReject.IsBeingRemoved = true;
+            try
+            {
+                var bookingToReject = SelectedBooking;
+                bookingToReject.IsBeingRemoved = true;
 
-            await Task.Delay(350);
+                await Task.Delay(350);
 
-            _realBookingService.RejectBooking(bookingToReject);
-            SelectedBooking = null;
+                _realBookingService.RejectBooking(bookingToReject);
+                SelectedBooking = null;
 
-            MessageBox.Show("Booking request rejected successfully.",
-                            "Reject Booking",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
+                MessageBox.Show("Booking request rejected successfully.",
+                                "Reject Booking",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message,
+                                "State Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+            }
         }
 
         private Visibility _packagesVisibility = Visibility.Visible;
@@ -551,18 +701,35 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             PackagesVisibility = Visibility.Collapsed;
             ReportsVisibility = Visibility.Visible;
+
+            IsDashboardVisible = false;
+            IsPackagesVisible = false;
+            IsBookingsVisible = false;
+            IsReportsVisible = true;
         }
 
         private void ShowPackages()
         {
             PackagesVisibility = Visibility.Visible;
             ReportsVisibility = Visibility.Collapsed;
+
+            IsDashboardVisible = false;
+            IsPackagesVisible = true;
+            IsBookingsVisible = false;
+            IsReportsVisible = false;
         }
 
         private void ShowBookings()
         {
             PackagesVisibility = Visibility.Collapsed;
             ReportsVisibility = Visibility.Collapsed;
+
+            IsDashboardVisible = false;
+            IsPackagesVisible = false;
+            IsBookingsVisible = true;
+            IsReportsVisible = false;
+
+            LoadAllBookings();
         }
 
         private void GenerateReport()
@@ -622,19 +789,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // scoate din Pending dacă nu mai e Pending
                 if (!string.Equals(bookingEvent.NewStatus, "Pending", StringComparison.OrdinalIgnoreCase))
                 {
-                    var toRemove = PendingBookings
-                        .FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
+                    var toRemove = PendingBookings.FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
 
                     if (toRemove != null)
                         PendingBookings.Remove(toRemove);
                 }
 
-                // actualizeaza în AllBookings
-                var existing = AllBookings
-                    .FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
+                var existing = AllBookings.FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
 
                 if (existing != null)
                 {
@@ -644,10 +807,55 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 AllBookings.Insert(0, bookingEvent.Booking);
 
                 RefreshReportPreview();
+
+                if (IsBookingsVisible)
+                {
+                    switch (_currentBookingFilter)
+                    {
+                        case "Pending":
+                            LoadPendingBookings();
+                            break;
+                        case "Confirmed":
+                            LoadConfirmedBookings();
+                            break;
+                        case "Rejected":
+                            LoadRejectedBookings();
+                            break;
+                        default:
+                            LoadAllBookings();
+                            break;
+                    }
+                }
             });
         }
 
+        private bool _isDashboardVisible;
+public bool IsDashboardVisible
+{
+    get => _isDashboardVisible;
+    set => Set(ref _isDashboardVisible, value);
+}
 
+private bool _isPackagesVisible;
+public bool IsPackagesVisible
+{
+    get => _isPackagesVisible;
+    set => Set(ref _isPackagesVisible, value);
+}
+
+private bool _isBookingsVisible;
+public bool IsBookingsVisible
+{
+    get => _isBookingsVisible;
+    set => Set(ref _isBookingsVisible, value);
+}
+
+private bool _isReportsVisible;
+public bool IsReportsVisible
+{
+    get => _isReportsVisible;
+    set => Set(ref _isReportsVisible, value);
+}
         private void Logout()
         {
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser;

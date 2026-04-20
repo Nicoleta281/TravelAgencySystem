@@ -1,7 +1,6 @@
 using FluentValidation;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using TravelAgency.Core.Data.Repositories;
@@ -16,7 +15,6 @@ using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
-using TravelAgency.Core.Patterns.Observer;
 
 namespace TravelAgency.WPF.ViewModels.ClientVM
 {

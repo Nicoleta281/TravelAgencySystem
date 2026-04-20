@@ -54,10 +54,7 @@ namespace TravelAgency.Core.Data.Mappers
                 TotalPrice = entity.TotalPrice
             };
 
-            booking.ChangeStatus(new BookingStatus
-            {
-                Name = entity.StatusName
-            });
+            booking.RestoreStateFromStatusName(entity.StatusName);
 
             return booking;
         }

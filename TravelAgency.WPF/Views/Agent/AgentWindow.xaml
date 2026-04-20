@@ -7,9 +7,13 @@
         WindowStartupLocation="CenterScreen"
         Background="#F6F7FB">
 
-    <Window.Resources>
-        <Style x:Key="SidebarButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="44"/>
+  
+        <Window.Resources>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+            <Style x:Key="SidebarButtonStyle" TargetType="Button">
+                <Setter Property="Height" Value="44"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -67,7 +71,7 @@
                     <Button Content="Dashboard"
             Style="{StaticResource SidebarButtonStyle}"
             Background="#2F80ED"
-            Command="{Binding ShowPackagesCommand}"/>
+            Command="{Binding ShowDashboardCommand}"/>
 
                     <Button Content="Packages"
             Style="{StaticResource SidebarButtonStyle}"
@@ -890,6 +894,181 @@ Grid.RowSpan="1"
 
                 </Grid>
             </Border>
+        </Grid>
+
+        <Grid Grid.Column="1"
+      Margin="24"
+      Visibility="{Binding IsBookingsVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="Bookings"
+                   FontSize="24"
+                   FontWeight="Bold"
+                   Foreground="#1F2937"/>
+
+                <TextBlock Text="Manage and filter booking requests"
+                   FontSize="14"
+                   Foreground="#6B7280"
+                   Margin="0,6,0,0"/>
+            </StackPanel>
+
+            <!-- Filters -->
+            <StackPanel Grid.Row="1"
+            Orientation="Horizontal"
+            Margin="0,0,0,16">
+                <Button Content="All"
+            Width="100"
+            Height="40"
+            Margin="0,0,10,0"
+            Background="#F3F4F6"
+            Foreground="#1F2937"
+            BorderBrush="#D1D5DB"
+            FontWeight="SemiBold"
+            Command="{Binding ShowAllBookingsCommand}"/>
+
+                <Button Content="Pending"
+            Width="100"
+            Height="40"
+            Margin="0,0,10,0"
+            Background="#F3F4F6"
+            Foreground="#1F2937"
+            BorderBrush="#D1D5DB"
+            FontWeight="SemiBold"
+            Command="{Binding ShowPendingBookingsCommand}"/>
+
+                <Button Content="Confirmed"
+            Width="110"
+            Height="40"
+            Margin="0,0,10,0"
+            Background="#F3F4F6"
+            Foreground="#1F2937"
+            BorderBrush="#D1D5DB"
+            FontWeight="SemiBold"
+            Command="{Binding ShowConfirmedBookingsCommand}"/>
+
+                <Button Content="Rejected"
+            Width="110"
+            Height="40"
+            Background="#F3F4F6"
+            Foreground="#1F2937"
+            BorderBrush="#D1D5DB"
+            FontWeight="SemiBold"
+            Command="{Binding ShowRejectedBookingsCommand}"/>
+            </StackPanel>
+
+            <!-- List -->
+            <ListBox Grid.Row="2"
+         ItemsSource="{Binding AgentBookings}"
+         SelectedItem="{Binding SelectedBooking, Mode=TwoWay}"
+         BorderThickness="0"
+         Background="Transparent"
+         HorizontalContentAlignment="Stretch"
+         ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0,0,0,12"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="OuterBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="2"
+                                CornerRadius="14"
+                                Padding="2">
+                                        <ContentPresenter/>
+                                    </Border>
+
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="OuterBorder" Property="Background" Value="#EAF2FF"/>
+                                            <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#2F80ED"/>
+                                        </Trigger>
+
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="OuterBorder" Property="Background" Value="#F3F8FF"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="16"
+                    BorderBrush="#E5E7EB"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Background="#FAFBFF">
+                            <StackPanel>
+                                <TextBlock Text="{Binding TripPackage.Name}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="#1F2937"/>
+
+                                <TextBlock Text="{Binding Client.Username, StringFormat=Client: {0}}"
+                               Margin="0,8,0,0"
+                               Foreground="#374151"/>
+
+                                <TextBlock Text="{Binding BookingDate, StringFormat=Booked on: {0:dd.MM.yyyy HH:mm}}"
+                               Margin="0,4,0,0"
+                               Foreground="#374151"/>
+
+                                <TextBlock Text="{Binding StatusName, StringFormat=Status: {0}}"
+                               Margin="0,4,0,0"
+                               Foreground="#374151"/>
+
+                                <TextBlock Text="{Binding TotalPrice, StringFormat=Total: € {0:F2}}"
+                               Margin="0,4,0,0"
+                               FontWeight="SemiBold"
+                               Foreground="#1F2937"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Actions -->
+            <Grid Grid.Row="3" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                Content="Approve"
+                Height="42"
+                Background="#2F80ED"
+                Foreground="White"
+                BorderBrush="Transparent"
+                FontWeight="SemiBold"
+                Command="{Binding ApproveBookingCommand}"/>
+
+                <Button Grid.Column="2"
+                Content="Reject"
+                Height="42"
+                Background="#E74C3C"
+                Foreground="White"
+                BorderBrush="Transparent"
+                FontWeight="SemiBold"
+                Command="{Binding RejectBookingCommand}"/>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
