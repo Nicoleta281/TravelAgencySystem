@@ -13,6 +13,7 @@ using TravelAgency.Core.Patterns.ChainOfResponsibility;
 using TravelAgency.Core.Patterns.Iterator;
 using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
+using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
 
@@ -218,11 +219,14 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
                 ?? throw new InvalidOperationException("User not authenticated.");
 
-            var realBookingAccessService = new BookingAccessService(_bookingRepository);
+            var realBookingAccessService = new BookingAccessService(_bookingRepository, _repo);
             _bookingService = new BookingAccessProxy(realBookingAccessService, currentUser);
 
             _notificationService = BookingNotificationService.Instance;
-            _realBookingService = new BookingService(_bookingRepository, BookingNotificationService.Instance);
+            _realBookingService = new BookingService(
+                _bookingRepository,
+                _repo,
+                BookingNotificationService.Instance);
 
             _notificationService.Attach(this);
 
@@ -868,13 +872,12 @@ public bool IsReportsVisible
 
             SessionManager.Instance.CurrentSession.EndSession();
 
-            var loginWindow = new LoginWindow();
-            loginWindow.Show();
-
-            Application.Current.Windows
+            var window = Application.Current.Windows
                 .OfType<Window>()
-                .FirstOrDefault(w => w is Views.AgentWindow)
-                ?.Close();
+                .FirstOrDefault(w => w is Views.AgentWindow);
+
+            if (window != null)
+                App.Mediator.Publish(new LogoutRequestedMessage(window));
         }
 
     }

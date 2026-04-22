@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace TravelAgency.Core.Patterns.Bridge.Models
+namespace TravelAgency.Core.Reporting.Models
 {
     public class ReportDocument
     {
@@ -12,3 +12,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Models
         public List<ReportRow> Rows { get; set; } = new();
     }
 }
+

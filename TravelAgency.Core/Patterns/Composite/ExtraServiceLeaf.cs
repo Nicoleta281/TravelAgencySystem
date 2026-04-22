@@ -1,4 +1,5 @@
 ﻿using System;
+using TravelAgency.Core.Visitors.ExtraServices;
 
 namespace TravelAgency.Core.Patterns.Composite
 {
@@ -40,6 +41,14 @@ namespace TravelAgency.Core.Patterns.Composite
                 return false;
 
             return Name.Equals(serviceName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public T Accept<T>(IExtraServiceComponentVisitor<T> visitor)
+        {
+            if (visitor == null)
+                throw new ArgumentNullException(nameof(visitor));
+
+            return visitor.VisitLeaf(this);
         }
     }
 }

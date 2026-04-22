@@ -9,7 +9,7 @@ using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Patterns.Adapters;
 using TravelAgency.Core.Patterns.Adapters.GeoDb;
 using TravelAgency.Core.Patterns.Adapters.SerpApi;
-using TravelAgency.Core.Patterns.Builders;
+using TravelAgency.Core.Services;
 
 namespace TravelAgency.Core.Patterns.Facades
 {
@@ -18,30 +18,26 @@ namespace TravelAgency.Core.Patterns.Facades
         private readonly ILocationSearchProvider _locationProvider;
         private readonly IHotelSearchProvider _hotelProvider;
         private readonly ITripPackageRepository _tripRepository;
-        private readonly ITripPackageBuilder _tripBuilder;
-        private readonly TripDirector _tripDirector;
+        private readonly TripCreationService _tripCreationService;
 
         public TravelPackageFacade()
         {
             _locationProvider = new GeoDbLocationAdapter();
             _hotelProvider = new SerpApiHotelAdapter();
             _tripRepository = new EfTripPackageRepository();
-
-            _tripBuilder = new TripPackageBuilder();
-            _tripDirector = new TripDirector(_tripBuilder);
+            _tripCreationService = new TripCreationService();
         }
 
         public TravelPackageFacade(
             ILocationSearchProvider locationProvider,
             IHotelSearchProvider hotelProvider,
             ITripPackageRepository tripRepository,
-            ITripPackageBuilder tripBuilder)
+            TripCreationService tripCreationService)
         {
             _locationProvider = locationProvider;
             _hotelProvider = hotelProvider;
             _tripRepository = tripRepository;
-            _tripBuilder = tripBuilder;
-            _tripDirector = new TripDirector(_tripBuilder);
+            _tripCreationService = tripCreationService;
         }
 
         public async Task<List<LocationOption>> SearchLocationsAsync(string query, int maxResults = 10)
@@ -72,7 +68,7 @@ namespace TravelAgency.Core.Patterns.Facades
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            return _tripDirector.Build(request);
+            return _tripCreationService.CreateTrip(request);
         }
 
         public TripPackage CreateAndSavePackage(TripRequest request)
@@ -80,7 +76,7 @@ namespace TravelAgency.Core.Patterns.Facades
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            var trip = _tripDirector.Build(request);
+            var trip = _tripCreationService.CreateTrip(request);
             _tripRepository.Add(trip);
 
             return trip;
@@ -91,7 +87,7 @@ namespace TravelAgency.Core.Patterns.Facades
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            var updatedTrip = _tripDirector.Build(request);
+            var updatedTrip = _tripCreationService.CreateTrip(request);
             updatedTrip.Id = existingId;
 
             _tripRepository.Update(updatedTrip);

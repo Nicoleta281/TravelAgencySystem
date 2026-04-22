@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TravelAgency.Core.Models.Booking;
-using TravelAgency.Core.Patterns.Bridge.Exporters;
-using TravelAgency.Core.Patterns.Bridge.Models;
+using TravelAgency.Core.Reporting.Exporters;
+using TravelAgency.Core.Reporting.Models;
 
-namespace TravelAgency.Core.Patterns.Bridge.Reports
+namespace TravelAgency.Core.Reporting.Reports
 {
     public class AllBookingsReport : AgentReport
     {
@@ -13,18 +13,17 @@ namespace TravelAgency.Core.Patterns.Bridge.Reports
         {
         }
 
-        protected override ReportDocument BuildDocument(IEnumerable<Booking> bookings, string generatedBy)
+        protected override ReportDocument BuildDocument(IReadOnlyList<Booking> bookings, string generatedBy)
         {
-            var list = bookings.ToList();
-
             return new ReportDocument
             {
                 Title = "All Bookings Report",
                 GeneratedBy = generatedBy,
                 GeneratedAt = DateTime.Now,
-                Summary = $"Total bookings: {list.Count}",
-                Rows = list.Select(BookingReportMapper.ToRow).ToList()
+                Summary = $"Total bookings: {bookings.Count}",
+                Rows = bookings.Select(BookingReportMapper.ToRow).ToList()
             };
         }
     }
 }
+

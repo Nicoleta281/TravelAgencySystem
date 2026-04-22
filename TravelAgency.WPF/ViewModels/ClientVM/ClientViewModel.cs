@@ -13,6 +13,7 @@ using TravelAgency.Core.Patterns.Flyweight;
 using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
+using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
 
@@ -125,14 +126,17 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
                 ?? throw new InvalidOperationException("User not authenticated.");
 
+            var bookingRepository = new EfBookingRepository();
+            var tripPackageRepository = new EfTripPackageRepository();
+
             _bookingService = new BookingAccessProxy(
-                new BookingAccessService(new EfBookingRepository()),
+                new BookingAccessService(bookingRepository, tripPackageRepository),
                 currentUser);
             _userRepository = new EfUserRepository();
             _notificationService = BookingNotificationService.Instance;
             _notificationService.Attach(this);
 
-            _bookingRepository = new EfBookingRepository();
+            _bookingRepository = bookingRepository;
             LogoutCommand = new RelayCommand(Logout);
 
             _currentClientUsername = currentUser.Username ?? "";
@@ -156,7 +160,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             ConfirmBookingCommand = new RelayCommand(ConfirmBooking);
             LogoutCommand = new RelayCommand(Logout);
 
-            LoadFromDatabaseOrSample();
+            LoadFromDatabase();
             LoadMyBookings();
         }
         private void ShowBookings()
@@ -171,7 +175,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             BookingsVisibility = Visibility.Collapsed;
         }
 
-        private void LoadFromDatabaseOrSample()
+        private void LoadFromDatabase()
         {
             Packages.Clear();
 
@@ -185,72 +189,13 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     Packages.Add(trip);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                
-            }
-
-            if (Packages.Count == 0)
-            {
-                // fallback: date demo, ca înainte
-                var factory = PackageSharedInfoFactorySingleton.Instance;
-
-                Packages.Add(new TripPackage
-                {
-                    Id = 1,
-                    Name = "Paris City Break",
-                    Price = 499,
-                    TransportDisplayName = "Plane",
-                    StayDisplayName = "Hotel",
-                    ShortDescription = "A relaxing city break in Paris.",
-
-                    SharedInfo = factory.GetOrCreate(
-                        "Paris",
-                        "France",
-                        "Chisinau",
-                        "Hotel Paris",
-                        "Breakfast",
-                        "Plane",
-                        "Hotel")
-                });
-
-                Packages.Add(new TripPackage
-                {
-                    Id = 2,
-                    Name = "Venice Weekend",
-                    Price = 249,
-                    TransportDisplayName = "Bus",
-                    StayDisplayName = "Hostel",
-                    ShortDescription = "A short and charming Venice trip.",
-
-                    SharedInfo = factory.GetOrCreate(
-                        "Venice",
-                        "Italy",
-                        "Chisinau",
-                        "Hostel Venice",
-                        "None",
-                        "Bus",
-                        "Hostel")
-                });
-
-                Packages.Add(new TripPackage
-                {
-                    Id = 3,
-                    Name = "Swiss Alps Adventure",
-                    Price = 799,
-                    TransportDisplayName = "Plane",
-                    StayDisplayName = "Hotel",
-                    ShortDescription = "An unforgettable alpine adventure.",
-
-                    SharedInfo = factory.GetOrCreate(
-          "Zermatt",
-          "Switzerland",
-          "Chisinau",
-          "Alps Hotel",
-          "Breakfast",
-          "Plane",
-          "Hotel")
-                });
+                MessageBox.Show(
+                    ex.Message,
+                    "Database error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
 
             if (AvailableExtras.Count == 0)
@@ -266,7 +211,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 }
             }
 
-            SelectedPackage = Packages.FirstOrDefault();
+            SelectedPackage = Packages.FirstOrDefault(p => p.AvailableSeats > 0) ?? Packages.FirstOrDefault();
         }
 
         private void Extra_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -394,6 +339,14 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Booking unavailable",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
         }
 
         private void LoadMyBookings()
@@ -443,13 +396,12 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
             SessionManager.Instance.CurrentSession.EndSession();
 
-            var loginWindow = new LoginWindow();
-            loginWindow.Show();
-
-            Application.Current.Windows
+            var window = Application.Current.Windows
                 .OfType<Window>()
-                .FirstOrDefault(w => w is Views.ClientWindow)
-                ?.Close();
+                .FirstOrDefault(w => w is Views.ClientWindow);
+
+            if (window != null)
+                App.Mediator.Publish(new LogoutRequestedMessage(window));
         }
     }
 }

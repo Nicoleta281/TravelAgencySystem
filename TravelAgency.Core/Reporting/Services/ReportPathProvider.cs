@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 
-namespace TravelAgency.Core.Patterns.Bridge.Services
+namespace TravelAgency.Core.Reporting.Services
 {
     public class ReportPathProvider
     {
@@ -21,3 +21,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Services
         }
     }
 }
+

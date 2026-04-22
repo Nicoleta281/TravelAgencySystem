@@ -11,6 +11,7 @@ using TravelAgency.Core.Services;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Commands.Admin;
 using TravelAgency.WPF.ViewModels.Admin;
+using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Views;
 
 namespace TravelAgency.WPF.ViewModels.AdminVM
@@ -509,13 +510,12 @@ namespace TravelAgency.WPF.ViewModels.AdminVM
 
             SessionManager.Instance.CurrentSession.EndSession();
 
-            var loginWindow = new LoginWindow();
-            loginWindow.Show();
-
-            Application.Current.Windows
+            var window = Application.Current.Windows
                 .OfType<Window>()
-                .FirstOrDefault(w => w is Views.AdminWindow)
-                ?.Close();
+                .FirstOrDefault(w => w is Views.AdminWindow);
+
+            if (window != null)
+                App.Mediator.Publish(new LogoutRequestedMessage(window));
         }
     }
 }

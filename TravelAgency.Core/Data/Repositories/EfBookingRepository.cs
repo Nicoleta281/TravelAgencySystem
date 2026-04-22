@@ -8,6 +8,21 @@ namespace TravelAgency.Core.Data.Repositories
 {
     public class EfBookingRepository : IBookingRepository
     {
+        public int CountByTripPackageIdAndStatuses(int tripPackageId, params string[] statusNames)
+        {
+            if (tripPackageId <= 0)
+                return 0;
+
+            if (statusNames == null || statusNames.Length == 0)
+                return 0;
+
+            using var db = TravelAgencyDbContextFactory.Create();
+
+            return db.Bookings
+                .AsNoTracking()
+                .Count(x => x.TripPackageId == tripPackageId && statusNames.Contains(x.StatusName));
+        }
+
         public IReadOnlyList<Booking> GetAll()
         {
             using var db = TravelAgencyDbContextFactory.Create();

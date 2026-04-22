@@ -1,8 +1,8 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
-using TravelAgency.Core.Patterns.Bridge.Models;
+using TravelAgency.Core.Reporting.Models;
 
-namespace TravelAgency.Core.Patterns.Bridge.Exporters
+namespace TravelAgency.Core.Reporting.Exporters
 {
     public class TxtReportExporter : IReportExporter
     {
@@ -36,3 +36,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Exporters
         }
     }
 }
+

@@ -8,6 +8,7 @@ namespace TravelAgency.Core.Data.Repositories
         IReadOnlyList<Booking> GetAll();
         IReadOnlyList<Booking> GetByClientUsername(string username);
         IReadOnlyList<Booking> GetPending();
+        int CountByTripPackageIdAndStatuses(int tripPackageId, params string[] statusNames);
         Booking Add(Booking booking);
         void Update(Booking booking);
         void Delete(int id);

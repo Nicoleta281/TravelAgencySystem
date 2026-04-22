@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
@@ -18,6 +19,7 @@ namespace TravelAgency.WPF.Views
         private readonly TripPackage? _editingTrip;
 
         private List<HotelSearchOption> _hotelResults = new();
+        private string? _selectedHotelThumbnailUrl;
         private readonly TravelPackageFacade _facade = new TravelPackageFacade();
         private List<LocationOption> _locationResults = new();
         private bool _isUpdatingDestinationSuggestions;
@@ -477,6 +479,39 @@ namespace TravelAgency.WPF.Views
                 $"{transport} + {accommodation} ({AccommodationNameTextBox.Text})";
 
             PreviewPriceText.Text = $"{finalPrice:F2}";
+            TryUpdatePreviewImage();
+        }
+
+        private void TryUpdatePreviewImage()
+        {
+            try
+            {
+                if (PreviewImageOverlay == null)
+                    return;
+
+                if (string.IsNullOrWhiteSpace(_selectedHotelThumbnailUrl))
+                {
+                    PreviewImageOverlay.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DCEBFA"));
+                    return;
+                }
+
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(_selectedHotelThumbnailUrl, UriKind.Absolute);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+
+                PreviewImageOverlay.Background = new ImageBrush(bitmap)
+                {
+                    Stretch = Stretch.UniformToFill,
+                    Opacity = 0.95
+                };
+            }
+            catch
+            {
+                if (PreviewImageOverlay != null)
+                    PreviewImageOverlay.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DCEBFA"));
+            }
         }
 
         private void LoadTripIntoForm()
@@ -756,6 +791,11 @@ namespace TravelAgency.WPF.Views
 
             AccommodationNameTextBox.Text = selectedHotel.Name ?? "";
             SetComboBoxByText(AccommodationTypeComboBox, "Hotel");
+            AccommodationTypeComboBox.IsEnabled = false;
+
+            _selectedHotelThumbnailUrl = string.IsNullOrWhiteSpace(selectedHotel.ThumbnailUrl)
+                ? null
+                : selectedHotel.ThumbnailUrl;
 
             int nights = 1;
 
@@ -784,6 +824,19 @@ namespace TravelAgency.WPF.Views
 
             if (currentStep == 5)
                 UpdateReviewPanel();
+        }
+
+        private void AccommodationTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // If the agent wants a non-hotel accommodation, unlock the field and clear hotel selection.
+            var selected = GetComboBoxText(AccommodationTypeComboBox);
+            if (!string.Equals(selected, "Hotel", StringComparison.OrdinalIgnoreCase))
+            {
+                _selectedHotelThumbnailUrl = null;
+                HotelsListBox.SelectedItem = null;
+                AccommodationTypeComboBox.IsEnabled = true;
+                UpdateLeftPreview();
+            }
         }
 
         private async void DestinationComboBox_KeyUp(object sender, KeyEventArgs e)

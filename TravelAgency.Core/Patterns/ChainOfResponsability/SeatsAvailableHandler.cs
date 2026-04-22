@@ -11,7 +11,7 @@
                 return new BookingApprovalResult
                 {
                     IsApproved = false,
-                    Message = "Booking cannot be approved because there are no available seats."
+                    Message = "Aprobarea nu este posibilă: pachetul nu mai are locuri disponibile (capacitate epuizată)."
                 };
             }
 

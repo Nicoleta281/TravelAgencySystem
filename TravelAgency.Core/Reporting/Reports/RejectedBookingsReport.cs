@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TravelAgency.Core.Models.Booking;
-using TravelAgency.Core.Patterns.Bridge.Exporters;
-using TravelAgency.Core.Patterns.Bridge.Models;
+using TravelAgency.Core.Reporting.Exporters;
+using TravelAgency.Core.Reporting.Models;
 
-namespace TravelAgency.Core.Patterns.Bridge.Reports
+namespace TravelAgency.Core.Reporting.Reports
 {
     public class RejectedBookingsReport : AgentReport
     {
@@ -13,20 +13,24 @@ namespace TravelAgency.Core.Patterns.Bridge.Reports
         {
         }
 
-        protected override ReportDocument BuildDocument(IEnumerable<Booking> bookings, string generatedBy)
+        protected override IReadOnlyList<Booking> PrepareBookings(IEnumerable<Booking> bookings)
         {
-            var list = bookings
+            return bookings
                 .Where(b => string.Equals(b.Status?.Name, "Rejected", StringComparison.OrdinalIgnoreCase))
                 .ToList();
+        }
 
+        protected override ReportDocument BuildDocument(IReadOnlyList<Booking> bookings, string generatedBy)
+        {
             return new ReportDocument
             {
                 Title = "Rejected Bookings Report",
                 GeneratedBy = generatedBy,
                 GeneratedAt = DateTime.Now,
-                Summary = $"Rejected bookings: {list.Count}",
-                Rows = list.Select(BookingReportMapper.ToRow).ToList()
+                Summary = $"Rejected bookings: {bookings.Count}",
+                Rows = bookings.Select(BookingReportMapper.ToRow).ToList()
             };
         }
     }
 }
+

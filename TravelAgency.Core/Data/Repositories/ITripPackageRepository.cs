@@ -6,6 +6,7 @@ namespace TravelAgency.Core.Data.Repositories
     public interface ITripPackageRepository
     {
         IReadOnlyList<TripPackage> GetAll();
+        TripPackage? GetById(int id);
         TripPackage Add(TripPackage trip);
 
         void Delete(int id);

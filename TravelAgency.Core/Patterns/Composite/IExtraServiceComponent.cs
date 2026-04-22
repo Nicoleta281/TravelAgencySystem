@@ -9,5 +9,7 @@ namespace TravelAgency.Core.Patterns.Composite
         string GetDetails();
         int GetServiceCount();
         bool ContainsService(string serviceName);
+
+        T Accept<T>(TravelAgency.Core.Visitors.ExtraServices.IExtraServiceComponentVisitor<T> visitor);
     }
 }

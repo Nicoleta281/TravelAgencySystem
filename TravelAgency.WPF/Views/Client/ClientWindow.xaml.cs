@@ -19,6 +19,16 @@ namespace TravelAgency.WPF.Views
                 sender is Button button &&
                 button.Tag is TripPackage trip)
             {
+                if (trip.AvailableSeats <= 0)
+                {
+                    MessageBox.Show(
+                        "Nu mai sunt disponibile locuri la acest pachet.",
+                        "Sold out",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
                 vm.SelectedPackage = trip;
             }
         }

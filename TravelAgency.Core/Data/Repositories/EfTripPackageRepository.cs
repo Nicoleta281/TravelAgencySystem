@@ -15,6 +15,16 @@ namespace TravelAgency.Core.Data.Repositories
             return entities.Select(TripPackageMapper.FromEntity).ToList();
         }
 
+        public TripPackage? GetById(int id)
+        {
+            if (id <= 0)
+                return null;
+
+            using var db = TravelAgencyDbContextFactory.Create();
+            var entity = db.TripPackages.AsNoTracking().FirstOrDefault(x => x.Id == id);
+            return entity == null ? null : TripPackageMapper.FromEntity(entity);
+        }
+
         public TripPackage Add(TripPackage trip)
         {
             using var db = TravelAgencyDbContextFactory.Create();

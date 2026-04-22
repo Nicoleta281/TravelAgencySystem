@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TravelAgency.Core.Visitors.ExtraServices;
 
 namespace TravelAgency.Core.Patterns.Composite
 {
@@ -117,6 +118,14 @@ namespace TravelAgency.Core.Patterns.Composite
         private bool ContainsDirectChildByName(string name)
         {
             return _services.Any(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public T Accept<T>(IExtraServiceComponentVisitor<T> visitor)
+        {
+            if (visitor == null)
+                throw new ArgumentNullException(nameof(visitor));
+
+            return visitor.VisitGroup(this);
         }
     }
 }

@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TravelAgency.Core.Models.Booking;
-using TravelAgency.Core.Patterns.Bridge.Models;
+using TravelAgency.Core.Reporting.Models;
 
-namespace TravelAgency.Core.Patterns.Bridge.Reports
+namespace TravelAgency.Core.Reporting.Reports
 {
     internal static class BookingReportMapper
     {
@@ -40,3 +35,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Reports
         }
     }
 }
+

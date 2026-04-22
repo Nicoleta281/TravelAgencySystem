@@ -25,6 +25,21 @@ namespace TravelAgency.WPF.Views
             }
         }
 
+        private void QuickCreatePackage_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new QuickCreatePackageWindow
+            {
+                Owner = this
+            };
+
+            var result = window.ShowDialog();
+
+            if (result == true && DataContext is AgentViewModel vm)
+            {
+                vm.ReloadCommand.Execute(null);
+            }
+        }
+
         private void EditPackage_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not AgentViewModel vm || vm.SelectedTrip == null)

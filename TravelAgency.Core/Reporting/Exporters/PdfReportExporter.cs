@@ -1,10 +1,10 @@
-﻿using QuestPDF.Fluent;
+using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QDocument = QuestPDF.Fluent.Document;
-using TravelAgency.Core.Patterns.Bridge.Models;
+using TravelAgency.Core.Reporting.Models;
 
-namespace TravelAgency.Core.Patterns.Bridge.Exporters
+namespace TravelAgency.Core.Reporting.Exporters
 {
     public class PdfReportExporter : IReportExporter
     {
@@ -80,3 +80,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Exporters
         }
     }
 }
+

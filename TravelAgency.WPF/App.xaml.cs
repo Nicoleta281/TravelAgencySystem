@@ -3,13 +3,18 @@ using QuestPDF.Infrastructure;
 using System.Windows;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
+using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Services;
+using TravelAgency.WPF.Messaging;
+using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Views;
 
 namespace TravelAgency.WPF
 {
     public partial class App : Application
     {
+        public static IMediator Mediator { get; private set; } = new AppMediator();
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -25,8 +30,51 @@ namespace TravelAgency.WPF
 
             QuestPDF.Settings.License = LicenseType.Community;
 
-            var loginWindow = new LoginWindow();
+            Mediator.Subscribe<UserLoggedInMessage>(OnUserLoggedIn);
+            Mediator.Subscribe<LogoutRequestedMessage>(OnLogoutRequested);
+
+            var loginWindow = new LoginWindow(Mediator);
             loginWindow.Show();
+        }
+
+        private static void OnUserLoggedIn(UserLoggedInMessage msg)
+        {
+            if (msg.User is Admin)
+            {
+                var adminWindow = new AdminWindow();
+                adminWindow.Show();
+                msg.SourceWindow.Close();
+                return;
+            }
+
+            if (msg.User is Agent)
+            {
+                var agentWindow = new AgentWindow();
+                agentWindow.Show();
+                msg.SourceWindow.Close();
+                return;
+            }
+
+            if (msg.User is Client)
+            {
+                var clientWindow = new ClientWindow();
+                clientWindow.Show();
+                msg.SourceWindow.Close();
+                return;
+            }
+
+            MessageBox.Show("Unknown user type assigned to this user.",
+                            "Login",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+        }
+
+        private static void OnLogoutRequested(LogoutRequestedMessage msg)
+        {
+            var loginWindow = new LoginWindow(Mediator);
+            loginWindow.Show();
+
+            msg.SourceWindow.Close();
         }
     }
 }

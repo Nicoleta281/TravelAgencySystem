@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using TravelAgency.Core.Models.Booking;
-using TravelAgency.Core.Patterns.Bridge.Exporters;
-using TravelAgency.Core.Patterns.Bridge.Reports;
-using TravelAgency.Core.Patterns.Bridge.Services;
+using TravelAgency.Core.Reporting.Exporters;
+using TravelAgency.Core.Reporting.Reports;
+using TravelAgency.Core.Reporting.Services;
 
 namespace TravelAgency.Core.Services
 {

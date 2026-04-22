@@ -152,6 +152,10 @@
                 Background="#DCEBFA"
                 CornerRadius="14">
                                 <Grid>
+                                    <Border x:Name="PreviewImageOverlay"
+                                            Background="#DCEBFA"
+                                            Opacity="0.85"
+                                            CornerRadius="14"/>
                                     <TextBlock x:Name="PreviewDestinationCodeText"
                            Text="PARIS"
                            FontSize="30"
@@ -394,7 +398,8 @@
                                         <ComboBox x:Name="AccommodationTypeComboBox"
                       Height="42"
                       Margin="0,8,0,0"
-                      FontSize="14">
+                      FontSize="14"
+                      SelectionChanged="AccommodationTypeComboBox_SelectionChanged">
                                             <ComboBoxItem Content="Hotel"/>
                                             <ComboBoxItem Content="Hostel"/>
                                             <ComboBoxItem Content="Resort"/>

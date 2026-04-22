@@ -12,6 +12,27 @@
         WindowStartupLocation="CenterScreen"
         Background="#F5F7FB">
 
+    <Window.Resources>
+        <Style x:Key="SoldOutCardStyle" TargetType="{x:Type Border}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding AvailableSeats}" Value="0">
+                    <Setter Property="Opacity" Value="0.55"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SoldOutButtonStyle" TargetType="{x:Type Button}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding AvailableSeats}" Value="0">
+                    <Setter Property="IsEnabled" Value="False"/>
+                    <Setter Property="Background" Value="#9CA3AF"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                    <Setter Property="Content" Value="Sold out"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220"/>
@@ -215,6 +236,29 @@
                    Foreground="#1E2A44"
                    Margin="0,0,0,16"/>
 
+                        <Border Grid.Row="1"
+                                Background="#FFFBEB"
+                                BorderBrush="#F59E0B"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="14"
+                                Margin="0,0,0,16">
+                            <Border.Style>
+                                <Style TargetType="{x:Type Border}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Packages.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="Nu există pachete disponibile momentan. Te rugăm să revii mai târziu."
+                                       Foreground="#92400E"
+                                       FontSize="14"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding Packages}">
                                 <ItemsControl.ItemsPanel>
@@ -231,7 +275,8 @@
                                 Background="#F9FAFB"
                                 BorderBrush="#E5E7EB"
                                 BorderThickness="1"
-                                CornerRadius="16">
+                                CornerRadius="16"
+                                Style="{StaticResource SoldOutCardStyle}">
                                             <StackPanel>
                                                 <Border Height="120"
                                         Background="#DCEAFB"
@@ -243,6 +288,27 @@
                                                FontWeight="Bold"
                                                Foreground="#1E2A44"
                                                TextWrapping="Wrap"/>
+
+                                                    <Border Background="#FEE2E2"
+                                                            CornerRadius="10"
+                                                            Padding="6,3"
+                                                            HorizontalAlignment="Left"
+                                                            Margin="0,8,0,0">
+                                                        <Border.Style>
+                                                            <Style TargetType="{x:Type Border}">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding AvailableSeats}" Value="0">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="Sold out"
+                                                                   Foreground="#991B1B"
+                                                                   FontWeight="SemiBold"
+                                                                   FontSize="12"/>
+                                                    </Border>
 
                                                     <TextBlock FontSize="13"
                                                Foreground="#6B7280"
@@ -259,6 +325,13 @@
                                         <Run Text="{Binding Destination, Mode=OneWay}"/>
                                                     </TextBlock>
 
+                                                    <TextBlock Margin="0,4,0,0"
+                                                               FontSize="13"
+                                                               Foreground="#6B7280">
+                                                        <Run Text="Seats left: "/>
+                                                        <Run Text="{Binding AvailableSeats}"/>
+                                                    </TextBlock>
+
                                                     <TextBlock Text="{Binding Price, StringFormat=€ {0:F2}}"
                                                FontSize="16"
                                                FontWeight="Bold"
@@ -272,6 +345,7 @@
                                             BorderThickness="0"
                                             FontWeight="SemiBold"
                                             FontSize="13"
+                                            Style="{StaticResource SoldOutButtonStyle}"
                                             Tag="{Binding}"
                                             Click="ViewDetails_Click"/>
                                                 </StackPanel>

@@ -9,10 +9,14 @@ namespace TravelAgency.Core.Services
     public class BookingAccessService : IBookingAccessService
     {
         private readonly IBookingRepository _bookingRepository;
+        private readonly ITripPackageRepository _tripPackageRepository;
 
-        public BookingAccessService(IBookingRepository bookingRepository)
+        public BookingAccessService(
+            IBookingRepository bookingRepository,
+            ITripPackageRepository tripPackageRepository)
         {
             _bookingRepository = bookingRepository;
+            _tripPackageRepository = tripPackageRepository;
         }
 
         public List<Booking> GetPendingBookings()
@@ -31,6 +35,22 @@ namespace TravelAgency.Core.Services
         {
             if (booking == null)
                 throw new ArgumentNullException(nameof(booking));
+
+            var tripPackageId = booking.TripPackage?.Id ?? 0;
+            if (tripPackageId <= 0)
+                throw new InvalidOperationException("Booking is missing a valid trip package id.");
+
+            var trip = _tripPackageRepository.GetById(tripPackageId);
+            if (trip == null)
+                throw new InvalidOperationException("Trip package no longer exists.");
+
+            // Capacity rule (Variant 1): Pending + Confirmed consume capacity.
+            var occupied = _bookingRepository.CountByTripPackageIdAndStatuses(tripPackageId, "Pending", "Confirmed");
+            if (occupied >= trip.AvailableSeats)
+            {
+                throw new InvalidOperationException(
+                    "Nu mai sunt disponibile locuri la acest pachet. Te rugăm să alegi alt pachet.");
+            }
 
             _bookingRepository.Add(booking);
         }

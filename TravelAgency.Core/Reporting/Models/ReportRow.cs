@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 
-namespace TravelAgency.Core.Patterns.Bridge.Models
+namespace TravelAgency.Core.Reporting.Models
 {
     public class ReportRow
     {
@@ -17,3 +13,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Models
         public string Destination { get; set; } = "";
     }
 }
+

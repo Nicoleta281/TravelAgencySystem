@@ -1,6 +1,6 @@
-﻿using TravelAgency.Core.Patterns.Bridge.Models;
+using TravelAgency.Core.Reporting.Models;
 
-namespace TravelAgency.Core.Patterns.Bridge.Exporters
+namespace TravelAgency.Core.Reporting.Exporters
 {
     public interface IReportExporter
     {
@@ -8,3 +8,4 @@ namespace TravelAgency.Core.Patterns.Bridge.Exporters
         string Export(ReportDocument document, string outputPath);
     }
 }
+

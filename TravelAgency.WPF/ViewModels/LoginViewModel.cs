@@ -6,6 +6,8 @@ using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Models.Users.Access;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
+using TravelAgency.WPF.Messaging;
+using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
 using System.Linq;
@@ -17,6 +19,7 @@ namespace TravelAgency.WPF.ViewModels
         private readonly AuthenticationService _authenticationService;
         private readonly IUserRepository _userRepository;
         private readonly Window _loginWindow;
+        private readonly IMediator _mediator;
         public ICommand OpenRegisterCommand { get; }
 
         private string _username = "";
@@ -43,9 +46,10 @@ namespace TravelAgency.WPF.ViewModels
 
         public ICommand LoginCommand { get; }
 
-        public LoginViewModel(Window loginWindow)
+        public LoginViewModel(Window loginWindow, IMediator mediator)
         {
             _loginWindow = loginWindow;
+            _mediator = mediator;
             _userRepository = new EfUserRepository();
             _authenticationService = new AuthenticationService(new EfUserRepository());
             LoginCommand = new RelayCommand(Login);
@@ -87,43 +91,7 @@ namespace TravelAgency.WPF.ViewModels
 
             SessionManager.Instance.CurrentSession.StartSession(user);
 
-            bool opened = OpenWorkspaceByRole(user);
-
-            if (opened)
-            {
-                _loginWindow.Close();
-            }
-        }
-
-        private bool OpenWorkspaceByRole(User user)
-        {
-            if (user is TravelAgency.Core.Models.Users.Admin)
-            {
-                var adminWindow = new AdminWindow();
-                adminWindow.Show();
-                return true;
-            }
-
-            if (user is Agent)
-            {
-                var agentWindow = new AgentWindow();
-                agentWindow.Show();
-                return true;
-            }
-
-            if (user is Client)
-            {
-                var clientWindow = new ClientWindow();
-                clientWindow.Show();
-                return true;
-            }
-
-            MessageBox.Show("Unknown user type assigned to this user.",
-                            "Login",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-
-            return false;
+            _mediator.Publish(new UserLoggedInMessage(user, _loginWindow));
         }
 
         private void OpenRegister()
