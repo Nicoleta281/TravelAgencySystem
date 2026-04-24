@@ -8,6 +8,7 @@ using TravelAgency.Core.Services;
 using TravelAgency.WPF.Messaging;
 using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Views;
+using TravelAgency.WPF.Views.Agent;
 
 namespace TravelAgency.WPF
 {
@@ -33,8 +34,9 @@ namespace TravelAgency.WPF
             Mediator.Subscribe<UserLoggedInMessage>(OnUserLoggedIn);
             Mediator.Subscribe<LogoutRequestedMessage>(OnLogoutRequested);
 
-            var loginWindow = new LoginWindow(Mediator);
-            loginWindow.Show();
+            var startWindow = new StartWindow(Mediator);
+            MainWindow = startWindow;
+            startWindow.Show();
         }
 
         private static void OnUserLoggedIn(UserLoggedInMessage msg)
@@ -71,9 +73,9 @@ namespace TravelAgency.WPF
 
         private static void OnLogoutRequested(LogoutRequestedMessage msg)
         {
-            var loginWindow = new LoginWindow(Mediator);
-            loginWindow.Show();
-
+            var startWindow = new StartWindow(Mediator);
+            Current.MainWindow = startWindow;
+            startWindow.Show();
             msg.SourceWindow.Close();
         }
     }

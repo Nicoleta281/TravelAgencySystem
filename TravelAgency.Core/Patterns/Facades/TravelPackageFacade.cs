@@ -48,6 +48,22 @@ namespace TravelAgency.Core.Patterns.Facades
             return await _locationProvider.SearchLocationsAsync(query, maxResults);
         }
 
+        public async Task<List<CountryOption>> SearchCountriesAsync(string query, int maxResults = 10)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return new List<CountryOption>();
+
+            return await _locationProvider.SearchCountriesAsync(query, maxResults);
+        }
+
+        public async Task<List<LocationOption>> GetCitiesByCountryCodeAsync(string countryCode, int maxResults = 20)
+        {
+            if (string.IsNullOrWhiteSpace(countryCode))
+                return new List<LocationOption>();
+
+            return await _locationProvider.GetCitiesByCountryCodeAsync(countryCode, maxResults);
+        }
+
         public async Task<List<HotelSearchOption>> SearchHotelsAsync(
             string destination,
             DateTime checkIn,

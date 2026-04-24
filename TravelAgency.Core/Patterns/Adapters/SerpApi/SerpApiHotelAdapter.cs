@@ -21,16 +21,16 @@ namespace TravelAgency.Core.Patterns.Adapters.SerpApi
         {
             // Some runs (e.g. launching from an IDE/debugger) may not inherit updated
             // Windows environment variables into the current process.
-            _apiKey = Environment.GetEnvironmentVariable("SERPAPI_API_KEY");
+            _apiKey = Environment.GetEnvironmentVariable("SERPAPI_API_KEY") ?? string.Empty;
             if (string.IsNullOrWhiteSpace(_apiKey))
                 _apiKey = Environment.GetEnvironmentVariable(
                     "SERPAPI_API_KEY",
-                    EnvironmentVariableTarget.User);
+                    EnvironmentVariableTarget.User) ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(_apiKey))
                 _apiKey = Environment.GetEnvironmentVariable(
                     "SERPAPI_API_KEY",
-                    EnvironmentVariableTarget.Machine);
+                    EnvironmentVariableTarget.Machine) ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("Missing environment variable: SERPAPI_API_KEY");

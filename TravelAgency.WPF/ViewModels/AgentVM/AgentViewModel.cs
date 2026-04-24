@@ -264,6 +264,16 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             TripsView.Refresh();
             Status = $"Loaded {Trips.Count} trips from database.";
         }
+
+        public void SelectTripById(int tripId)
+        {
+            if (tripId <= 0)
+                return;
+
+            var match = Trips.FirstOrDefault(t => t.Id == tripId);
+            if (match != null)
+                SelectedTrip = match;
+        }
         private void LoadBookings()
         {
             var bookings = _bookingRepository.GetAll().ToList();
@@ -874,7 +884,7 @@ public bool IsReportsVisible
 
             var window = Application.Current.Windows
                 .OfType<Window>()
-                .FirstOrDefault(w => w is Views.AgentWindow);
+                .FirstOrDefault(w => w is TravelAgency.WPF.Views.Agent.AgentWindow);
 
             if (window != null)
                 App.Mediator.Publish(new LogoutRequestedMessage(window));

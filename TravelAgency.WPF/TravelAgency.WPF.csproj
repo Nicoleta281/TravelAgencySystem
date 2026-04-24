@@ -25,4 +25,18 @@
     <Folder Include="Models\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Assets\start-hero.png" />
+    <Resource Include="Assets\login-bg.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\Agent\AgentWindow.xaml.cs">
+      <DependentUpon>AgentWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Agent\QuickCreatePackageWindow.xaml.cs">
+      <DependentUpon>QuickCreatePackageWindow.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
 </Project>

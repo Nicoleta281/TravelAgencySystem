@@ -4,7 +4,7 @@ using TravelAgency.Core.Services;
 using TravelAgency.Core.Models.Locations;
 using TravelAgency.WPF.ViewModels.AgentVM;
 
-namespace TravelAgency.WPF.Views
+namespace TravelAgency.WPF.Views.Agent
 {
     public partial class AgentWindow : Window
     {
@@ -36,7 +36,10 @@ namespace TravelAgency.WPF.Views
 
             if (result == true && DataContext is AgentViewModel vm)
             {
+                var createdId = window.CreatedTrip?.Id ?? 0;
+
                 vm.ReloadCommand.Execute(null);
+                vm.SelectTripById(createdId);
             }
         }
 

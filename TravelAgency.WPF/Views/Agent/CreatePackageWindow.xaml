@@ -272,29 +272,35 @@
                Foreground="#1F2937"
                Margin="0,0,0,18"/>
 
+                                <TextBlock Text="Country"
+               FontSize="14"
+               FontWeight="SemiBold"
+               Foreground="#374151"/>
+                                <ComboBox x:Name="CountryComboBox"
+             Height="42"
+             Margin="0,8,0,0"
+             FontSize="14"
+             IsEditable="True"
+             IsTextSearchEnabled="False"
+             StaysOpenOnEdit="True"
+             TextBoxBase.TextChanged="CountryComboBox_TextChanged"
+             KeyDown="CountryComboBox_KeyDown"
+             SelectionChanged="CountryComboBox_SelectionChanged"/>
+
                                 <TextBlock Text="Destination"
                FontSize="14"
                FontWeight="SemiBold"
                Foreground="#374151"/>
                                     <ComboBox x:Name="DestinationComboBox"
           Height="42"
-          Margin="0,8,0,0"
+          Margin="0,8,0,16"
           FontSize="14"
           IsEditable="True"
           IsTextSearchEnabled="False"
           StaysOpenOnEdit="True"
+          TextBoxBase.TextChanged="DestinationComboBox_TextChanged"
           SelectionChanged="DestinationComboBox_SelectionChanged"
           KeyUp="DestinationComboBox_KeyUp"/>
-
-                                    <TextBlock Text="Country"
-               FontSize="14"
-               FontWeight="SemiBold"
-               Foreground="#374151"/>
-                                <TextBox x:Name="CountryTextBox"
-             Height="42"
-             Margin="0,8,0,16"
-             FontSize="14"
-             Padding="12,0"/>
 
                                 <Grid Margin="0,0,0,16">
                                     <Grid.ColumnDefinitions>
@@ -384,32 +390,8 @@
                                 </Grid>
 
                                 <Grid Margin="0,0,0,16">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="16"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Accommodation Type"
-                       FontSize="14"
-                       FontWeight="SemiBold"
-                       Foreground="#374151"/>
-                                        <ComboBox x:Name="AccommodationTypeComboBox"
-                      Height="42"
-                      Margin="0,8,0,0"
-                      FontSize="14"
-                      SelectionChanged="AccommodationTypeComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="Hotel"/>
-                                            <ComboBoxItem Content="Hostel"/>
-                                            <ComboBoxItem Content="Resort"/>
-                                            <ComboBoxItem Content="Apartment"/>
-                                            <ComboBoxItem Content="Villa"/>
-                                        </ComboBox>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Hotel / Accommodation Name"
+                                    <StackPanel>
+                                        <TextBlock Text="Accommodation name"
                        FontSize="14"
                        FontWeight="SemiBold"
                        Foreground="#374151"/>
@@ -418,49 +400,75 @@
                      Margin="0,8,0,0"
                      FontSize="14"
                      Padding="12,0"/>
-                                            <StackPanel Margin="0,0,0,16">
-                                                <Button x:Name="SearchHotelsButton"
-            Content="Search Hotels"
+
+                                        <TextBlock Text="Search location (city, country)"
+                       Margin="0,14,0,0"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="#374151"/>
+                                        <TextBox x:Name="HotelSearchLocationTextBox"
+                     Height="42"
+                     Margin="0,8,0,0"
+                     FontSize="14"
+                     Padding="12,0"
+                     ToolTip="Defaults to destination and country from Step 2. Change if you want to search another area."
+                     TextChanged="HotelSearchLocationTextBox_TextChanged"/>
+
+                                        <Button x:Name="SearchHotelsButton"
+            Content="Search accommodation"
             Height="40"
-            Width="160"
+            Width="220"
+            Margin="0,12,0,0"
             HorizontalAlignment="Left"
             Background="#2F80ED"
             Foreground="White"
             FontWeight="SemiBold"
             Click="SearchHotelsButton_Click"/>
 
-                                                <ListBox x:Name="HotelsListBox"
+                                        <TextBlock Text="Filter results"
+                       Margin="0,14,0,0"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="#374151"/>
+                                        <TextBox x:Name="HotelResultsFilterTextBox"
+                     Height="42"
+                     Margin="0,8,0,0"
+                     FontSize="14"
+                     Padding="12,0"
+                     ToolTip="Filters the last search results by name or description (client-side)."
+                     TextChanged="HotelResultsFilterTextBox_TextChanged"/>
+
+                                        <ListBox x:Name="HotelsListBox"
              Margin="0,12,0,0"
              Height="220"
              SelectionChanged="HotelsListBox_SelectionChanged">
-                                                    <ListBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border Padding="10" Margin="0,0,0,8" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8">
-                                                                <StackPanel>
-                                                                    <TextBlock Text="{Binding Name}"
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="10" Margin="0,0,0,8" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}"
                                    FontWeight="Bold"
                                    FontSize="14"
                                    Foreground="#1F2937"/>
 
-                                                                    <TextBlock Text="{Binding Description}"
+                                                            <TextBlock Text="{Binding Description}"
                                    Margin="0,4,0,0"
                                    TextWrapping="Wrap"
                                    Foreground="#6B7280"/>
 
-                                                                    <TextBlock Margin="0,6,0,0"
+                                                            <TextBlock Margin="0,6,0,0"
                                    FontWeight="SemiBold"
                                    Foreground="#2F80ED"
                                    Text="{Binding PricePerNight, StringFormat=Price per night: {0} EUR}"/>
 
-                                                                    <TextBlock Foreground="#6B7280"
+                                                            <TextBlock Foreground="#6B7280"
                                    Text="{Binding HotelClass, StringFormat=Class: {0}}"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ListBox.ItemTemplate>
-                                                </ListBox>
-                                            </StackPanel>
-                                        </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
                                 </Grid>
 
                                 <Grid Margin="0,0,0,16">
@@ -755,7 +763,7 @@
                            Foreground="#374151"
                            Margin="0,0,0,8"/>
 
-                                            <TextBlock Text="Accommodation Type:"
+                                            <TextBlock Text="Stay (category):"
                            FontSize="14"
                            Foreground="#6B7280"/>
                                             <TextBlock x:Name="ReviewAccommodationTypeText"
@@ -763,7 +771,7 @@
                            Foreground="#374151"
                            Margin="0,0,0,8"/>
 
-                                            <TextBlock Text="Accommodation Name:"
+                                            <TextBlock Text="Accommodation name:"
                            FontSize="14"
                            Foreground="#6B7280"/>
                                             <TextBlock x:Name="ReviewAccommodationNameText"

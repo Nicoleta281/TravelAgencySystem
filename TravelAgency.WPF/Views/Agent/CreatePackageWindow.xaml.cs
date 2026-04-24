@@ -1,4 +1,8 @@
 using System.Globalization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -16,18 +20,31 @@ namespace TravelAgency.WPF.Views
 {
     public partial class CreatePackageWindow : Window
     {
+        /// <summary>Package stay category when the wizard no longer asks for hotel vs apartment etc.</summary>
+        private const string DefaultStayCategory = "Lodging";
+
         private readonly TripPackage? _editingTrip;
 
         private List<HotelSearchOption> _hotelResults = new();
         private string? _selectedHotelThumbnailUrl;
         private readonly TravelPackageFacade _facade = new TravelPackageFacade();
         private List<LocationOption> _locationResults = new();
-        private bool _isUpdatingDestinationSuggestions;
         private CancellationTokenSource? _locationSearchCts;
+        private CancellationTokenSource? _countrySearchCts;
+        private CountryOption? _selectedCountry;
+        private List<LocationOption> _countryCities = new();
+        private bool _suppressCountrySearch;
         private int currentStep = 1;
         private bool _isLoading;
 
-        public CreatePackageWindow(TripPackage? tripToEdit = null)
+        private bool _suppressHotelSearchLocationSync;
+        private bool _hotelSearchLocationDirty;
+        private bool _suppressHotelFilterTextChanged;
+
+        /// <summary>Used to cancel in-flight Geo lookups when leaving Step 2 (their continuations would reopen popups over later steps).</summary>
+        private int _lastWizardStep = 1;
+
+        public CreatePackageWindow(TripPackage? tripToEdit = null, int initialStep = 1)
         {
             InitializeComponent();
 
@@ -52,12 +69,160 @@ namespace TravelAgency.WPF.Views
 
             if (_editingTrip != null)
             {
-                Title = "Edit Package";
                 LoadTripIntoForm();
+
+                if (initialStep >= 1 && initialStep <= 5)
+                    currentStep = initialStep;
             }
 
             UpdateWizardUI();
             UpdateLeftPreview();
+
+            SyncHotelSearchLocationFromDestination(resetDirty: true);
+            UpdateHotelSearchUiState();
+        }
+
+        private static string GetDestinationCityQuery(string raw)
+        {
+            var text = raw?.Trim() ?? string.Empty;
+            if (text.Length == 0)
+                return string.Empty;
+
+            var commaIdx = text.IndexOf(',', StringComparison.Ordinal);
+            if (commaIdx > 0)
+                return text[..commaIdx].Trim();
+
+            return text;
+        }
+
+        private string BuildDefaultHotelLocationQuery()
+        {
+            var city = GetDestinationCityQuery(DestinationComboBox.Text);
+            var country = CountryComboBox.Text?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(city))
+                return string.Empty;
+
+            if (string.IsNullOrWhiteSpace(country))
+                return city;
+
+            return $"{city}, {country}";
+        }
+
+        private void SyncHotelSearchLocationFromDestination(bool resetDirty)
+        {
+            if (HotelSearchLocationTextBox == null)
+                return;
+
+            if (resetDirty)
+                _hotelSearchLocationDirty = false;
+
+            if (_hotelSearchLocationDirty)
+                return;
+
+            var next = BuildDefaultHotelLocationQuery();
+            if (string.Equals(HotelSearchLocationTextBox.Text?.Trim(), next, StringComparison.Ordinal))
+                return;
+
+            try
+            {
+                _suppressHotelSearchLocationSync = true;
+                HotelSearchLocationTextBox.Text = next;
+            }
+            finally
+            {
+                _suppressHotelSearchLocationSync = false;
+            }
+        }
+
+        private void ApplyHotelResultsFilter()
+        {
+            if (HotelsListBox == null)
+                return;
+
+            var previousSelection = HotelsListBox.SelectedItem as HotelSearchOption;
+
+            if (_hotelResults.Count == 0)
+            {
+                HotelsListBox.ItemsSource = null;
+                return;
+            }
+
+            var filter = HotelResultsFilterTextBox?.Text?.Trim() ?? string.Empty;
+            if (filter.Length == 0)
+            {
+                HotelsListBox.ItemsSource = _hotelResults.Take(10).ToList();
+                RestoreHotelListSelection(previousSelection);
+                return;
+            }
+
+            var filtered = _hotelResults
+                .Where(h =>
+                {
+                    var name = h.Name ?? string.Empty;
+                    var desc = h.Description ?? string.Empty;
+                    return name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                           desc.Contains(filter, StringComparison.OrdinalIgnoreCase);
+                })
+                .Take(10)
+                .ToList();
+
+            HotelsListBox.ItemsSource = filtered;
+            RestoreHotelListSelection(previousSelection);
+        }
+
+        private void RestoreHotelListSelection(HotelSearchOption? previous)
+        {
+            if (previous == null || HotelsListBox.Items.Count == 0)
+                return;
+
+            foreach (var item in HotelsListBox.Items)
+            {
+                if (ReferenceEquals(item, previous))
+                {
+                    HotelsListBox.SelectedItem = item;
+                    return;
+                }
+            }
+        }
+
+        private static LocationOption? FindMatchingLocation(IEnumerable<LocationOption> items, LocationOption? prior)
+        {
+            if (prior == null)
+                return null;
+
+            foreach (var x in items)
+            {
+                if (ReferenceEquals(x, prior))
+                    return x;
+            }
+
+            foreach (var x in items)
+            {
+                if (string.Equals(x.City, prior.City, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.Country, prior.Country, StringComparison.OrdinalIgnoreCase))
+                    return x;
+            }
+
+            return null;
+        }
+
+        private void RestoreDestinationListSelection(IEnumerable<LocationOption> items)
+        {
+            var prior = DestinationComboBox.SelectedItem as LocationOption;
+            var match = FindMatchingLocation(items, prior);
+            if (match != null)
+                DestinationComboBox.SelectedItem = match;
+        }
+
+        private void UpdateHotelSearchUiState()
+        {
+            if (SearchHotelsButton == null || HotelSearchLocationTextBox == null || HotelResultsFilterTextBox == null)
+                return;
+
+            SearchHotelsButton.IsEnabled = true;
+            HotelSearchLocationTextBox.IsEnabled = true;
+            HotelResultsFilterTextBox.IsEnabled = true;
         }
 
         private TripRequest BuildTripRequestFromForm()
@@ -66,9 +231,9 @@ namespace TravelAgency.WPF.Views
             string tripType = GetComboBoxText(TripTypeComboBox);
             string category = GetComboBoxText(CategoryComboBox);
             string shortDescription = ShortDescriptionTextBox.Text.Trim();
-            string destination = DestinationComboBox.Text.Trim();
+            string destination = GetDestinationCityQuery(DestinationComboBox.Text);
 
-            string country = CountryTextBox.Text.Trim();
+            string country = CountryComboBox.Text.Trim();
             DateTime? startDate = StartDatePicker.SelectedDate;
             DateTime? endDate = EndDatePicker.SelectedDate;
 
@@ -102,7 +267,7 @@ namespace TravelAgency.WPF.Views
 
             string transportType = GetComboBoxText(TransportTypeComboBox);
             string departureCity = DepartureCityTextBox.Text.Trim();
-            string accommodationType = GetComboBoxText(AccommodationTypeComboBox);
+            string accommodationType = DefaultStayCategory;
             string accommodationName = AccommodationNameTextBox.Text.Trim();
             string mealPlan = GetComboBoxText(MealPlanComboBox);
             int availableSeats = ParseInt(AvailableSeatsTextBox.Text, "Available Seats");
@@ -290,8 +455,36 @@ namespace TravelAgency.WPF.Views
             return 0m;
         }
 
+        private void CancelPendingLocationLookupsAndCloseDropdowns()
+        {
+            try
+            {
+                _locationSearchCts?.Cancel();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _countrySearchCts?.Cancel();
+            }
+            catch
+            {
+            }
+
+            if (DestinationComboBox != null)
+                DestinationComboBox.IsDropDownOpen = false;
+
+            if (CountryComboBox != null)
+                CountryComboBox.IsDropDownOpen = false;
+        }
+
         private void UpdateWizardUI()
         {
+            if (_lastWizardStep == 2 && currentStep != 2)
+                CancelPendingLocationLookupsAndCloseDropdowns();
+
             Step1Panel.Visibility = currentStep == 1 ? Visibility.Visible : Visibility.Collapsed;
             Step2Panel.Visibility = currentStep == 2 ? Visibility.Visible : Visibility.Collapsed;
             Step3Panel.Visibility = currentStep == 3 ? Visibility.Visible : Visibility.Collapsed;
@@ -365,6 +558,14 @@ namespace TravelAgency.WPF.Views
                 Step5Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
                 Step5Label.FontWeight = FontWeights.Normal;
             }
+
+            if (currentStep == 3)
+            {
+                SyncHotelSearchLocationFromDestination(resetDirty: false);
+                UpdateHotelSearchUiState();
+            }
+
+            _lastWizardStep = currentStep;
         }
 
         private void UpdateReviewPanel()
@@ -375,7 +576,7 @@ namespace TravelAgency.WPF.Views
             ReviewDescriptionText.Text = GetSafeText(ShortDescriptionTextBox.Text);
 
             ReviewDestinationText.Text = GetSafeText(DestinationComboBox.Text);
-            ReviewCountryText.Text = GetSafeText(CountryTextBox.Text);
+            ReviewCountryText.Text = GetSafeText(CountryComboBox.Text);
             ReviewStartDateText.Text = StartDatePicker.SelectedDate?.ToString("dd MMM yyyy") ?? "-";
             ReviewEndDateText.Text = EndDatePicker.SelectedDate?.ToString("dd MMM yyyy") ?? "-";
 
@@ -395,7 +596,7 @@ namespace TravelAgency.WPF.Views
 
             ReviewTransportText.Text = GetSafeText(GetComboBoxText(TransportTypeComboBox));
             ReviewDepartureCityText.Text = GetSafeText(DepartureCityTextBox.Text);
-            ReviewAccommodationTypeText.Text = GetSafeText(GetComboBoxText(AccommodationTypeComboBox));
+            ReviewAccommodationTypeText.Text = GetSafeText(DefaultStayCategory);
             ReviewAccommodationNameText.Text = GetSafeText(AccommodationNameTextBox.Text);
             ReviewMealPlanText.Text = GetSafeText(GetComboBoxText(MealPlanComboBox));
             ReviewAvailableSeatsText.Text = GetSafeText(AvailableSeatsTextBox.Text);
@@ -456,7 +657,6 @@ namespace TravelAgency.WPF.Views
             string description = GetSafeText(ShortDescriptionTextBox.Text);
 
             string transport = GetSafeText(GetComboBoxText(TransportTypeComboBox));
-            string accommodation = GetSafeText(GetComboBoxText(AccommodationTypeComboBox));
 
             decimal basePrice = ParseDecimal(BasePriceTextBox.Text);
             decimal discount = ParseDecimal(DiscountTextBox.Text);
@@ -475,8 +675,11 @@ namespace TravelAgency.WPF.Views
             PreviewPackageNameText.Text = packageName;
             PreviewDescriptionText.Text = description == "-" ? "Package preview" : description;
 
+            var stayName = AccommodationNameTextBox.Text.Trim();
             PreviewTransportStayText.Text =
-                $"{transport} + {accommodation} ({AccommodationNameTextBox.Text})";
+                string.IsNullOrWhiteSpace(stayName)
+                    ? $"{transport} + stay"
+                    : $"{transport} + stay ({stayName})";
 
             PreviewPriceText.Text = $"{finalPrice:F2}";
             TryUpdatePreviewImage();
@@ -537,15 +740,15 @@ namespace TravelAgency.WPF.Views
             ShortDescriptionTextBox.Text = _editingTrip.ShortDescription ?? "";
 
             DestinationComboBox.Text = _editingTrip.Destination;
-            CountryTextBox.Text = _editingTrip.Country;
+            CountryComboBox.Text = _editingTrip.Country;
 
-            if (string.IsNullOrWhiteSpace(DestinationComboBox.Text) || string.IsNullOrWhiteSpace(CountryTextBox.Text))
+            if (string.IsNullOrWhiteSpace(DestinationComboBox.Text) || string.IsNullOrWhiteSpace(CountryComboBox.Text))
             {
                 var (dest, country) = InferDestinationCountryFromSeason(_editingTrip.Season?.Name);
                 if (string.IsNullOrWhiteSpace(DestinationComboBox.Text))
                     DestinationComboBox.Text = dest;
-                if (string.IsNullOrWhiteSpace(CountryTextBox.Text))
-                    CountryTextBox.Text = country;
+                if (string.IsNullOrWhiteSpace(CountryComboBox.Text))
+                    CountryComboBox.Text = country;
             }
 
             StartDatePicker.SelectedDate = _editingTrip.Season?.StartDate;
@@ -568,7 +771,6 @@ namespace TravelAgency.WPF.Views
             SetComboBoxByText(TransportTypeComboBox, NormalizeTransportName(_editingTrip.TransportName));
             DepartureCityTextBox.Text = _editingTrip.DepartureCity;
 
-            SetComboBoxByText(AccommodationTypeComboBox, NormalizeStayName(_editingTrip.StayName));
             AccommodationNameTextBox.Text = _editingTrip.AccommodationName;
 
             var mealPlan = _editingTrip.MealPlan;
@@ -605,6 +807,11 @@ namespace TravelAgency.WPF.Views
             RecalculatePrice();
             UpdateLeftPreview();
             UpdateReviewPanel();
+
+            Title = _editingTrip.Id > 0 ? "Edit Package" : "Create New Package";
+
+            SyncHotelSearchLocationFromDestination(resetDirty: true);
+            UpdateHotelSearchUiState();
         }
 
         private static void SetComboBoxByText(ComboBox comboBox, string text)
@@ -666,26 +873,6 @@ namespace TravelAgency.WPF.Views
             return "Own Transport";
         }
 
-        private static string NormalizeStayName(string stayName)
-        {
-            if (stayName.Contains("Hotel", StringComparison.OrdinalIgnoreCase))
-                return "Hotel";
-
-            if (stayName.Contains("Hostel", StringComparison.OrdinalIgnoreCase))
-                return "Hostel";
-
-            if (stayName.Contains("Resort", StringComparison.OrdinalIgnoreCase))
-                return "Resort";
-
-            if (stayName.Contains("Apartment", StringComparison.OrdinalIgnoreCase))
-                return "Apartment";
-
-            if (stayName.Contains("Villa", StringComparison.OrdinalIgnoreCase))
-                return "Villa";
-
-            return "Hotel";
-        }
-
         private static (string destination, string country) InferDestinationCountryFromSeason(string? seasonName)
         {
             if (string.IsNullOrWhiteSpace(seasonName))
@@ -730,25 +917,31 @@ namespace TravelAgency.WPF.Views
         {
             try
             {
-                string destination = DestinationComboBox.Text?.Trim() ?? string.Empty;
+                SyncHotelSearchLocationFromDestination(resetDirty: false);
+
+                string destination =
+                    (HotelSearchLocationTextBox?.Text?.Trim().Length > 0
+                        ? HotelSearchLocationTextBox.Text.Trim()
+                        : BuildDefaultHotelLocationQuery());
+
                 DateTime? checkIn = StartDatePicker.SelectedDate;
                 DateTime? checkOut = EndDatePicker.SelectedDate;
 
                 if (string.IsNullOrWhiteSpace(destination))
                 {
-                    MessageBox.Show("Select a destination first.", "Hotel Search", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Select a destination first.", "Accommodation search", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 if (!checkIn.HasValue || !checkOut.HasValue)
                 {
-                    MessageBox.Show("Select start and end dates first.", "Hotel Search", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Select start and end dates first.", "Accommodation search", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 if (checkOut.Value <= checkIn.Value)
                 {
-                    MessageBox.Show("End Date must be after Start Date.", "Hotel Search", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("End Date must be after Start Date.", "Accommodation search", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -762,25 +955,36 @@ namespace TravelAgency.WPF.Views
                     checkOut.Value,
                     2);
 
-                HotelsListBox.ItemsSource = _hotelResults.Take(10).ToList();
+                try
+                {
+                    _suppressHotelFilterTextChanged = true;
+                    if (HotelResultsFilterTextBox != null)
+                        HotelResultsFilterTextBox.Text = string.Empty;
+                }
+                finally
+                {
+                    _suppressHotelFilterTextChanged = false;
+                }
+
+                ApplyHotelResultsFilter();
 
                 if (_hotelResults.Count == 0)
                 {
                     MessageBox.Show(
-                        "No hotels found for the selected destination and dates.",
-                        "Hotel Search",
+                        "No places found for the selected location and dates.",
+                        "Accommodation search",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Hotel Search Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(ex.Message, "Accommodation search", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally
             {
-                SearchHotelsButton.IsEnabled = true;
-                SearchHotelsButton.Content = "Search Hotels";
+                SearchHotelsButton.Content = "Search accommodation";
+                UpdateHotelSearchUiState();
             }
         }
 
@@ -790,8 +994,6 @@ namespace TravelAgency.WPF.Views
                 return;
 
             AccommodationNameTextBox.Text = selectedHotel.Name ?? "";
-            SetComboBoxByText(AccommodationTypeComboBox, "Hotel");
-            AccommodationTypeComboBox.IsEnabled = false;
 
             _selectedHotelThumbnailUrl = string.IsNullOrWhiteSpace(selectedHotel.ThumbnailUrl)
                 ? null
@@ -826,24 +1028,60 @@ namespace TravelAgency.WPF.Views
                 UpdateReviewPanel();
         }
 
-        private void AccommodationTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void DestinationComboBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // If the agent wants a non-hotel accommodation, unlock the field and clear hotel selection.
-            var selected = GetComboBoxText(AccommodationTypeComboBox);
-            if (!string.Equals(selected, "Hotel", StringComparison.OrdinalIgnoreCase))
-            {
-                _selectedHotelThumbnailUrl = null;
-                HotelsListBox.SelectedItem = null;
-                AccommodationTypeComboBox.IsEnabled = true;
-                UpdateLeftPreview();
-            }
+            if (_isLoading)
+                return;
+
+            SyncHotelSearchLocationFromDestination(resetDirty: false);
+        }
+
+        private void HotelSearchLocationTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_suppressHotelSearchLocationSync)
+                return;
+
+            _hotelSearchLocationDirty = true;
+        }
+
+        private void HotelResultsFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_suppressHotelFilterTextChanged)
+                return;
+
+            ApplyHotelResultsFilter();
         }
 
         private async void DestinationComboBox_KeyUp(object sender, KeyEventArgs e)
         {
             try
             {
+                if (currentStep != 2)
+                    return;
+
                 string query = DestinationComboBox.Text?.Trim() ?? string.Empty;
+
+                // If a country was chosen, filter within loaded cities (fast, no API).
+                if (_selectedCountry != null && _countryCities.Count > 0)
+                {
+                    if (query.Length == 0)
+                    {
+                        DestinationComboBox.ItemsSource = _countryCities;
+                        DestinationComboBox.IsDropDownOpen = _countryCities.Count > 0;
+                        RestoreDestinationListSelection(_countryCities);
+                        return;
+                    }
+
+                    var filtered = _countryCities
+                        .Where(x => (x.City ?? string.Empty).StartsWith(query, StringComparison.OrdinalIgnoreCase))
+                        .Take(30)
+                        .ToList();
+
+                    DestinationComboBox.ItemsSource = filtered;
+                    DestinationComboBox.IsDropDownOpen = filtered.Count > 0;
+                    RestoreDestinationListSelection(filtered);
+                    return;
+                }
 
                 if (query.Length < 3)
                 {
@@ -861,13 +1099,20 @@ namespace TravelAgency.WPF.Views
                 if (token.IsCancellationRequested)
                     return;
 
+                if (currentStep != 2)
+                    return;
+
                 _locationResults = await _facade.SearchLocationsAsync(query, 10);
 
                 if (token.IsCancellationRequested)
                     return;
 
+                if (currentStep != 2)
+                    return;
+
                 DestinationComboBox.ItemsSource = _locationResults;
                 DestinationComboBox.IsDropDownOpen = _locationResults.Count > 0;
+                RestoreDestinationListSelection(_locationResults);
             }
             catch (TaskCanceledException)
             {
@@ -883,9 +1128,213 @@ namespace TravelAgency.WPF.Views
             if (DestinationComboBox.SelectedItem is LocationOption selectedLocation)
             {
                 DestinationComboBox.Text = selectedLocation.City;
-                CountryTextBox.Text = selectedLocation.Country;
+                if (_selectedCountry == null)
+                    CountryComboBox.Text = selectedLocation.Country;
 
                 DestinationComboBox.IsDropDownOpen = false;
+
+                SyncHotelSearchLocationFromDestination(resetDirty: true);
+                UpdateHotelSearchUiState();
+
+                UpdateLeftPreview();
+                if (currentStep == 5)
+                    UpdateReviewPanel();
+            }
+        }
+
+        private async void CountryComboBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            try
+            {
+                if (_suppressCountrySearch)
+                    return;
+
+                if (_isLoading)
+                    return;
+
+                if (currentStep != 2)
+                    return;
+
+                var query = CountryComboBox.Text?.Trim() ?? string.Empty;
+
+                if (_selectedCountry != null &&
+                    !string.Equals(query, _selectedCountry.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    _selectedCountry = null;
+                    _countryCities = new List<LocationOption>();
+                    DestinationComboBox.ItemsSource = null;
+                    DestinationComboBox.SelectedItem = null;
+                }
+
+                if (query.Length < 2)
+                {
+                    CountryComboBox.IsDropDownOpen = false;
+                    return;
+                }
+
+                _countrySearchCts?.Cancel();
+                _countrySearchCts = new CancellationTokenSource();
+                var token = _countrySearchCts.Token;
+
+                await Task.Delay(600, token);
+                if (token.IsCancellationRequested)
+                    return;
+
+                if (currentStep != 2)
+                    return;
+
+                var results = await _facade.SearchCountriesAsync(query, 10);
+                if (token.IsCancellationRequested)
+                    return;
+
+                if (currentStep != 2)
+                    return;
+
+                CountryComboBox.ItemsSource = results;
+                CountryComboBox.DisplayMemberPath = nameof(CountryOption.Name);
+                CountryComboBox.IsDropDownOpen = results.Count > 0;
+
+                await TryAutoCommitCountryAsync(results, query, token, allowShortAutoPick: false);
+
+                if (currentStep == 2)
+                    SyncHotelSearchLocationFromDestination(resetDirty: false);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Country Search Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private async void CountryComboBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+                return;
+
+            e.Handled = true;
+
+            try
+            {
+                if (currentStep != 2)
+                    return;
+
+                var query = CountryComboBox.Text?.Trim() ?? string.Empty;
+                if (query.Length < 2)
+                    return;
+
+                var list = (CountryComboBox.ItemsSource as IEnumerable<CountryOption>)?.ToList() ?? new List<CountryOption>();
+                if (list.Count == 0)
+                    list = await _facade.SearchCountriesAsync(query, 10);
+
+                await TryAutoCommitCountryAsync(list, query, CancellationToken.None, allowShortAutoPick: true);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Country Search Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private async void CountryComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (CountryComboBox.SelectedItem is not CountryOption country)
+                return;
+
+            if (currentStep != 2)
+                return;
+
+            await ApplySelectedCountryAsync(country);
+        }
+
+        private async Task TryAutoCommitCountryAsync(
+            List<CountryOption> results,
+            string query,
+            CancellationToken token,
+            bool allowShortAutoPick)
+        {
+            if (currentStep != 2)
+                return;
+
+            if (results.Count == 0)
+                return;
+
+            CountryOption? pick = null;
+
+            if (results.Count == 1)
+            {
+                // Avoid auto-committing on very short prefixes (e.g. "Fr") which can spam GeoDB and hit HTTP 429.
+                if (!allowShortAutoPick && query.Length < 3)
+                    return;
+
+                pick = results[0];
+            }
+            else
+            {
+                pick = results.FirstOrDefault(c =>
+                    string.Equals(c.Name, query, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (pick == null)
+                return;
+
+            if (token.IsCancellationRequested)
+                return;
+
+            if (currentStep != 2)
+                return;
+
+            await ApplySelectedCountryAsync(pick);
+        }
+
+        private async Task ApplySelectedCountryAsync(CountryOption country)
+        {
+            if (currentStep != 2)
+                return;
+
+            // Auto-commit / repeated events can call this multiple times for the same country; avoid wiping destination.
+            if (_selectedCountry != null &&
+                string.Equals(_selectedCountry.Code, country.Code, StringComparison.OrdinalIgnoreCase) &&
+                _countryCities.Count > 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _suppressCountrySearch = true;
+                _selectedCountry = country;
+                CountryComboBox.SelectedItem = country;
+                CountryComboBox.Text = country.Name;
+                CountryComboBox.IsDropDownOpen = false;
+            }
+            finally
+            {
+                _suppressCountrySearch = false;
+            }
+
+            try
+            {
+                // RapidAPI GeoDB free tiers often cap "limit" to 10.
+                _countryCities = await _facade.GetCitiesByCountryCodeAsync(country.Code, 10);
+
+                DestinationComboBox.ItemsSource = _countryCities;
+                DestinationComboBox.IsDropDownOpen = false;
+
+                if (currentStep == 2)
+                {
+                    DestinationComboBox.SelectedItem = null;
+                    DestinationComboBox.Text = "";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Destination Load Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                SyncHotelSearchLocationFromDestination(resetDirty: true);
+                UpdateHotelSearchUiState();
 
                 UpdateLeftPreview();
                 if (currentStep == 5)
