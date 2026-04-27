@@ -14,7 +14,7 @@ namespace TravelAgency.Core.Services
 
         public User? Authenticate(string username, string password)
         {
-            var user = _userRepository.GetByUsername(username);
+            var user = _userRepository.GetByEmail(username);
 
             if (user == null)
                 return null;

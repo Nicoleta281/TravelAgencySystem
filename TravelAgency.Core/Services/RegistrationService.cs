@@ -27,6 +27,8 @@ namespace TravelAgency.Core.Services
             var client = new Client
             {
                 Username = request.Username.Trim(),
+                Email = request.Email.Trim(),
+                PhoneNumber = null,
                 PasswordHash = PasswordHasher.Hash(request.Password),
                 Role = new Role { Name = "Client" },
                 Session = new UserSession { IsActive = false }

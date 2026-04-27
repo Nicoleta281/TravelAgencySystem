@@ -323,7 +323,7 @@
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
                              Style="{StaticResource InputBox}"
                              Margin="0,0,0,14"/>
 
@@ -339,12 +339,17 @@
                                  Margin="0,0,0,8"
                                  PasswordChanged="PasswordInput_PasswordChanged"/>
 
-                    <TextBlock Text="Forgot password?"
-                               Foreground="#BFDBFE"
-                               FontSize="11"
-                               Opacity="0.95"
-                               HorizontalAlignment="Right"
-                               Margin="0,0,0,14"/>
+                    <Button Content="Forgot password?"
+                            Command="{Binding OpenForgotPasswordCommand}"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,0,14"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#BFDBFE"
+                            FontSize="11"
+                            Opacity="0.95"
+                            Cursor="Hand"/>
 
                     <TextBlock Text="{Binding ErrorMessage}"
                                Foreground="#FCA5A5"

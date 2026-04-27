@@ -34,6 +34,18 @@ namespace TravelAgency.Core.Data.Repositories
             return entity == null ? null : UserMapper.FromEntity(entity);
         }
 
+        public User? GetByEmail(string email)
+        {
+            using var db = TravelAgencyDbContextFactory.Create();
+            var normalized = (email ?? "").Trim();
+
+            var entity = db.Users
+                .AsNoTracking()
+                .FirstOrDefault(x => x.Email != null && x.Email == normalized);
+
+            return entity == null ? null : UserMapper.FromEntity(entity);
+        }
+
         public User Add(User user)
         {
             using var db = TravelAgencyDbContextFactory.Create();
@@ -57,6 +69,8 @@ namespace TravelAgency.Core.Data.Repositories
             var mapped = UserMapper.ToEntity(user);
 
             entity.Username = mapped.Username;
+            entity.Email = mapped.Email;
+            entity.PhoneNumber = mapped.PhoneNumber;
             entity.PasswordHash = mapped.PasswordHash;
             entity.RoleName = mapped.RoleName;
             entity.IsActive = mapped.IsActive;

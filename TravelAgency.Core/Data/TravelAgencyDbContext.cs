@@ -9,6 +9,8 @@ namespace TravelAgency.Core.Data
         public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
         public DbSet<AdminAnalyticsSnapshotEntity> AdminAnalyticsSnapshots { get; set; }
         public DbSet<UserEntity> Users => Set<UserEntity>();
+        public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
+        public DbSet<PasswordResetLinkTokenEntity> PasswordResetLinkTokens => Set<PasswordResetLinkTokenEntity>();
 
         public TravelAgencyDbContext(DbContextOptions<TravelAgencyDbContext> options)
             : base(options) { }
@@ -43,10 +45,13 @@ namespace TravelAgency.Core.Data
                 e.Property(x => x.Id).ValueGeneratedOnAdd();
 
                 e.Property(x => x.Username).IsRequired();
+                e.Property(x => x.Email).HasMaxLength(254);
+                e.Property(x => x.PhoneNumber).HasMaxLength(20);
                 e.Property(x => x.PasswordHash).IsRequired();
                 e.Property(x => x.RoleName).IsRequired();
 
                 e.HasIndex(x => x.Username).IsUnique();
+                e.HasIndex(x => x.PhoneNumber);
             });
             modelBuilder.Entity<AdminAnalyticsSnapshotEntity>(entity =>
             {
@@ -58,6 +63,33 @@ namespace TravelAgency.Core.Data
 
                 entity.Property(x => x.SavedAt)
                       .IsRequired();
+            });
+
+            modelBuilder.Entity<PasswordResetTokenEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedOnAdd();
+
+                e.Property(x => x.UserId).IsRequired();
+                e.Property(x => x.CodeHash).IsRequired();
+                e.Property(x => x.CreatedAtUtc).IsRequired();
+                e.Property(x => x.ExpiresAtUtc).IsRequired();
+
+                e.HasIndex(x => new { x.UserId, x.ExpiresAtUtc });
+            });
+
+            modelBuilder.Entity<PasswordResetLinkTokenEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedOnAdd();
+
+                e.Property(x => x.UserId).IsRequired();
+                e.Property(x => x.TokenHash).IsRequired();
+                e.Property(x => x.CreatedAtUtc).IsRequired();
+                e.Property(x => x.ExpiresAtUtc).IsRequired();
+
+                e.HasIndex(x => new { x.UserId, x.ExpiresAtUtc });
+                e.HasIndex(x => x.TokenHash);
             });
         }
     }

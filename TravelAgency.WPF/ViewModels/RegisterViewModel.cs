@@ -17,10 +17,17 @@ namespace TravelAgency.WPF.ViewModels
         private readonly Window _registerWindow;
         private readonly RegistrationService _registrationService;
 
+        private string _email = "";
         private string _username = "";
         private string _password = "";
         private string _confirmPassword = "";
         private string _errorMessage = "";
+
+        public string Email
+        {
+            get => _email;
+            set => Set(ref _email, value);
+        }
 
         public string Username
         {
@@ -64,6 +71,7 @@ namespace TravelAgency.WPF.ViewModels
 
             var request = new RegisterRequest
             {
+                Email = Email?.Trim() ?? "",
                 Username = Username?.Trim() ?? "",
                 Password = Password ?? "",
                 ConfirmPassword = ConfirmPassword ?? ""
@@ -76,10 +84,13 @@ namespace TravelAgency.WPF.ViewModels
 
                 _registrationService.RegisterClient(request);
 
-                MessageBox.Show("Account created successfully. You can now log in.",
-                                "Register",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Information);
+                var dialog = new MessageDialogWindow(
+                    "Register",
+                    "Account created successfully. You can now log in.")
+                {
+                    Owner = _registerWindow
+                };
+                dialog.ShowDialog();
 
                 var loginWindow = new LoginWindow();
                 loginWindow.Show();

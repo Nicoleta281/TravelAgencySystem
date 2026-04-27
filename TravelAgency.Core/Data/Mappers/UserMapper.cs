@@ -12,6 +12,8 @@ namespace TravelAgency.Core.Data.Mappers
             {
                 Id = user.Id,
                 Username = user.Username,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
                 PasswordHash = user.PasswordHash,
                 RoleName = user.Role?.Name ?? "",
                 IsActive = user.Session?.IsActive ?? false,
@@ -33,6 +35,8 @@ namespace TravelAgency.Core.Data.Mappers
 
             user.Id = entity.Id;
             user.Username = entity.Username;
+            user.Email = entity.Email;
+            user.PhoneNumber = entity.PhoneNumber;
             user.PasswordHash = entity.PasswordHash;
             user.Role = new Role { Name = entity.RoleName };
             user.IsBlocked = entity.IsBlocked;

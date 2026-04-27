@@ -28,6 +28,7 @@
   <ItemGroup>
     <Resource Include="Assets\start-hero.png" />
     <Resource Include="Assets\login-bg.png" />
+    <Resource Include="Assets\register-bg.png" />
   </ItemGroup>
 
   <ItemGroup>

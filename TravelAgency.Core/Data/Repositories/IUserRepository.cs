@@ -8,6 +8,7 @@ namespace TravelAgency.Core.Data.Repositories
         User? GetById(int id);
         IReadOnlyList<User> GetAll();
         User? GetByUsername(string username);
+        User? GetByEmail(string email);
         User Add(User user);
         void Update(User user);
     }

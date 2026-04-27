@@ -21,15 +21,16 @@ namespace TravelAgency.WPF.ViewModels
         private readonly Window _loginWindow;
         private readonly IMediator _mediator;
         public ICommand OpenRegisterCommand { get; }
+        public ICommand OpenForgotPasswordCommand { get; }
 
-        private string _username = "";
+        private string _email = "";
         private string _password = "";
         private string _errorMessage = "";
 
-        public string Username
+        public string Email
         {
-            get => _username;
-            set => Set(ref _username, value);
+            get => _email;
+            set => Set(ref _email, value);
         }
 
         public string Password
@@ -54,6 +55,7 @@ namespace TravelAgency.WPF.ViewModels
             _authenticationService = new AuthenticationService(new EfUserRepository());
             LoginCommand = new RelayCommand(Login);
             OpenRegisterCommand = new RelayCommand(OpenRegister);
+            OpenForgotPasswordCommand = new RelayCommand(OpenForgotPassword);
 
         }
 
@@ -63,7 +65,7 @@ namespace TravelAgency.WPF.ViewModels
 
             var request = new LoginRequest
             {
-                Username = Username?.Trim() ?? "",
+                Email = Email?.Trim() ?? "",
                 Password = Password ?? ""
             };
 
@@ -78,11 +80,11 @@ namespace TravelAgency.WPF.ViewModels
                 return;
             }
 
-            var user = _authenticationService.Authenticate(request.Username, request.Password);
+            var user = _authenticationService.Authenticate(request.Email, request.Password);
 
             if (user == null)
             {
-                ErrorMessage = "Invalid username or password.";
+                ErrorMessage = "Invalid email or password.";
                 return;
             }
 
@@ -99,6 +101,16 @@ namespace TravelAgency.WPF.ViewModels
             var registerWindow = new RegisterWindow();
             registerWindow.Show();
             _loginWindow.Close();
+        }
+
+        private void OpenForgotPassword()
+        {
+            var forgotWindow = new ForgotPasswordWindow
+            {
+                Owner = _loginWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            forgotWindow.ShowDialog();
         }
     }
 }

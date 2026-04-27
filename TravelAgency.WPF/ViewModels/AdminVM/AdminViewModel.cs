@@ -216,7 +216,7 @@ namespace TravelAgency.WPF.ViewModels.AdminVM
                 {
                     Id = user.Id,
                     Username = user.Username,
-                    Email = $"{user.Username}@travelagency.com",
+                    Email = user.Email ?? "",
                     Role = user.Role?.Name ?? "",
                     Status = user.IsBlocked ? "Blocked" : "Active"
                 });
