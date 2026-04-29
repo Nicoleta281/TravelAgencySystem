@@ -78,6 +78,9 @@ namespace TravelAgency.WPF
             services.AddTransient<BookingApprovalChainFactory>();
             services.AddSingleton<PackageSharedInfoFactory>();
             services.AddTransient<TripComponentFactorySelector>();
+            // TripDirector depinde de interfața ITripPackageBuilder.
+            // Dacă nu o înregistrăm, DI nu poate rezolva constructorul TripDirector și crash-uie la navigare.
+            services.AddTransient<ITripPackageBuilder, TripPackageBuilder>();
             services.AddTransient<TripPackageBuilder>();
             services.AddTransient<TripDirector>();
             services.AddTransient<TripCreationService>();
