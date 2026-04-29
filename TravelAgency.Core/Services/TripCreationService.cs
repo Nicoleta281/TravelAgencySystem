@@ -4,6 +4,7 @@ using FluentValidation;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.TripPkg.Services;
+using TravelAgency.Core.Patterns.Bridge;
 using TravelAgency.Core.Patterns.Builders;
 using TravelAgency.Core.Patterns.Factories.AbstractFactory;
 using TravelAgency.Core.Validators;
@@ -12,14 +13,27 @@ namespace TravelAgency.Core.Services
 {
     public class TripCreationService
     {
+        private readonly TripComponentFactorySelector _componentFactorySelector;
+        private readonly TripDirector _director;
+        private readonly TripPackageBuilder _builder;
+
+        public TripCreationService(
+            TripComponentFactorySelector componentFactorySelector,
+            TripDirector director,
+            TripPackageBuilder builder)
+        {
+            _componentFactorySelector = componentFactorySelector
+                ?? throw new ArgumentNullException(nameof(componentFactorySelector));
+            _director = director ?? throw new ArgumentNullException(nameof(director));
+            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+        }
+
         public TripPackage CreateTrip(TripRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            ITripComponentFactory factory = request.TripType == "Premium"
-                ? new PremiumTripFactory()
-                : new BudgetTripFactory();
+            ITripComponentFactory factory = _componentFactorySelector.Select(request.TripType);
 
             var transportType = string.IsNullOrWhiteSpace(request.TransportType)
                 ? "Train"
@@ -28,41 +42,23 @@ namespace TravelAgency.Core.Services
             var transport = factory.CreateTransport(transportType);
             var stay = factory.CreateStay();
 
-            var builder = new TripPackageBuilder();
-            var director = new TripDirector(builder);
-
-            var trip = director.Build(request);
-
-            // completare explicita a campurilor non-flyweight
-            trip.Name = request.PackageName ?? "";
-            trip.TripType = request.TripType ?? "";
-            trip.Category = request.Category ?? "";
-            trip.ShortDescription = request.ShortDescription ?? "";
-            trip.BasePrice = request.BasePrice;
-            trip.AvailableSeats = request.AvailableSeats;
-
-            trip.DiscountPercent = request.DiscountPercent;
-            trip.VatPercent = request.VatPercent;
-            trip.ExtraCharges = request.ExtraCharges;
+            // Builder + Director orchestrate the complex object graph (including Flyweight shared info).
+            _director.ChangeBuilder(_builder);
+            var trip = _director.Build(request);
 
             // doar daca utilizatorul a dat explicit final price
             if (request.FinalPrice > 0)
                 trip.Price = request.FinalPrice;
 
-            // season: doar daca sunt ambele date
-            if (request.StartDate.HasValue && request.EndDate.HasValue)
-            {
-                trip.Season = new Season
-                {
-                    Name = $"{request.Destination}, {request.Country} trip",
-                    StartDate = request.StartDate.Value,
-                    EndDate = request.EndDate.Value
-                };
-            }
-
             // componente create prin Abstract Factory
             trip.Transport = transport;
             trip.Stay = stay;
+
+            // Bridge: Abstraction (itinerary) varies independently from implementors (transport/stay).
+            // We pick the refined abstraction based on the trip type.
+            trip.Itinerary = string.Equals(request.TripType, "Premium", StringComparison.OrdinalIgnoreCase)
+                ? new PremiumTravelItinerary(trip.Name, transport, stay)
+                : new StandardTravelItinerary(trip.Name, transport, stay);
 
             // pentru UI / fallback vizual
             trip.TransportDisplayName = !string.IsNullOrWhiteSpace(request.TransportType)

@@ -8,7 +8,7 @@ namespace TravelAgency.Core.Models.Locations
 {
     public class Destination
     {
-        public string Name {  get; set; }
+        public string Name { get; set; } = "";
         public List<Attraction> Attractions { get; set; } = new();
 
     }

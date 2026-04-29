@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 
 using TravelAgency.WPF.ViewModels.AdminVM;
 
@@ -9,7 +10,7 @@ namespace TravelAgency.WPF.Views
         public AdminWindow()
         {
             InitializeComponent();
-            DataContext = new AdminViewModel();
+            DataContext = ActivatorUtilities.CreateInstance<AdminViewModel>(App.Services);
         }
     }
 }

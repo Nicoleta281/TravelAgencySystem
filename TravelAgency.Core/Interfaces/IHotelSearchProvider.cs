@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using TravelAgency.Core.Models.Locations;
 
@@ -13,6 +14,7 @@ namespace TravelAgency.Core.Interfaces
             string destination,
             DateTime checkInDate,
             DateTime checkOutDate,
-            int adults);
+            int adults,
+            CancellationToken cancellationToken = default);
     }
 }

@@ -21,7 +21,7 @@ namespace TravelAgency.WPF.Views.Agent
     {
         public TripPackage? CreatedTrip { get; private set; }
 
-        private readonly TravelPackageFacade _facade = new();
+        private readonly TravelPackageFacade _facade;
         private CancellationTokenSource? _destinationSearchCts;
         private CancellationTokenSource? _countrySearchCts;
         private bool _isLoaded;
@@ -33,8 +33,9 @@ namespace TravelAgency.WPF.Views.Agent
         private bool _destinationSearchErrorShown;
         private bool _countrySearchErrorShown;
 
-        public QuickCreatePackageWindow()
+        public QuickCreatePackageWindow(TravelPackageFacade facade)
         {
+            _facade = facade ?? throw new ArgumentNullException(nameof(facade));
             InitializeComponent();
             StartDatePicker.SelectedDate = DateTime.Today.AddDays(30);
             EndDatePicker.SelectedDate = DateTime.Today.AddDays(37);

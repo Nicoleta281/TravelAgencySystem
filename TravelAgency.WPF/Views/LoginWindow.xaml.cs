@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using TravelAgency.WPF.Messaging;
 using TravelAgency.WPF.ViewModels;
 
@@ -13,7 +14,7 @@ namespace TravelAgency.WPF.Views
         public LoginWindow(IMediator mediator)
         {
             InitializeComponent();
-            DataContext = new LoginViewModel(this, mediator);
+            DataContext = ActivatorUtilities.CreateInstance<LoginViewModel>(App.Services, this, mediator);
         }
 
         private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e)

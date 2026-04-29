@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using TravelAgency.WPF.ViewModels;
 
 namespace TravelAgency.WPF.Views
@@ -8,7 +9,7 @@ namespace TravelAgency.WPF.Views
         public ForgotPasswordWindow()
         {
             InitializeComponent();
-            DataContext = new ForgotPasswordViewModel(this);
+            DataContext = ActivatorUtilities.CreateInstance<ForgotPasswordViewModel>(App.Services, this);
             Closed += (_, _) =>
             {
                 if (DataContext is ForgotPasswordViewModel vm)

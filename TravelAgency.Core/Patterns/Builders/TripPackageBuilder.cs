@@ -10,9 +10,9 @@ namespace TravelAgency.Core.Patterns.Builders
         private TripPackage _tripPackage = null!;
         private readonly PackageSharedInfoFactory _sharedInfoFactory;
 
-        public TripPackageBuilder()
+        public TripPackageBuilder(PackageSharedInfoFactory sharedInfoFactory)
         {
-            _sharedInfoFactory = PackageSharedInfoFactorySingleton.Instance;
+            _sharedInfoFactory = sharedInfoFactory ?? throw new ArgumentNullException(nameof(sharedInfoFactory));
             Reset();
         }
 

@@ -9,7 +9,7 @@ namespace TravelAgency.Core.Models.Locations
 {
     public class City
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public List<Destination> Destinations { get; set; } = new();
 
     }

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Models.External.SerpApi;
@@ -12,38 +12,24 @@ namespace TravelAgency.Core.Patterns.Adapters.SerpApi
 {
     public class SerpApiHotelAdapter : IHotelSearchProvider
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient;
+        private readonly SerpApiOptions _options;
 
-        private readonly string _apiKey;
-        private readonly string _baseUrl;
-
-        public SerpApiHotelAdapter()
+        public SerpApiHotelAdapter(HttpClient httpClient, SerpApiOptions options)
         {
-            // Some runs (e.g. launching from an IDE/debugger) may not inherit updated
-            // Windows environment variables into the current process.
-            _apiKey = Environment.GetEnvironmentVariable("SERPAPI_API_KEY") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(_apiKey))
-                _apiKey = Environment.GetEnvironmentVariable(
-                    "SERPAPI_API_KEY",
-                    EnvironmentVariableTarget.User) ?? string.Empty;
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
 
-            if (string.IsNullOrWhiteSpace(_apiKey))
-                _apiKey = Environment.GetEnvironmentVariable(
-                    "SERPAPI_API_KEY",
-                    EnvironmentVariableTarget.Machine) ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(_apiKey))
-                throw new InvalidOperationException("Missing environment variable: SERPAPI_API_KEY");
-
-            _baseUrl = ConfigurationManager.AppSettings["SerpApi.BaseUrl"]
-                ?? "https://serpapi.com/search.json";
+            if (string.IsNullOrWhiteSpace(_options.ApiKey))
+                throw new InvalidOperationException("Missing SerpApi API key.");
         }
 
         public async Task<List<HotelSearchOption>> SearchHotelsAsync(
             string destination,
             DateTime checkInDate,
             DateTime checkOutDate,
-            int adults)
+            int adults,
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(destination))
                 throw new ArgumentException("Destination is required.", nameof(destination));
@@ -55,19 +41,19 @@ namespace TravelAgency.Core.Patterns.Adapters.SerpApi
                 throw new ArgumentException("Adults must be greater than 0.", nameof(adults));
 
             string url =
-                $"{_baseUrl}" +
+                $"{_options.BaseUrl}" +
                 $"?engine=google_hotels" +
                 $"&q={Uri.EscapeDataString(destination)}" +
                 $"&check_in_date={checkInDate:yyyy-MM-dd}" +
                 $"&check_out_date={checkOutDate:yyyy-MM-dd}" +
                 $"&adults={adults}" +
-                $"&currency=EUR" +
-                $"&hl=ro" +
-                $"&gl=fr" +
-                $"&api_key={_apiKey}";
+                $"&currency={Uri.EscapeDataString(_options.Currency)}" +
+                $"&hl={Uri.EscapeDataString(_options.Language)}" +
+                $"&gl={Uri.EscapeDataString(_options.Country)}" +
+                $"&api_key={Uri.EscapeDataString(_options.ApiKey)}";
 
-            var response = await _httpClient.GetAsync(url);
-            var json = await response.Content.ReadAsStringAsync();
+            using var response = await _httpClient.GetAsync(url, cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

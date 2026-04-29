@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using FluentValidation;
@@ -65,13 +66,13 @@ namespace TravelAgency.WPF.ViewModels
         public ICommand ConfirmResetCommand { get; }
         public ICommand CloseCommand { get; }
 
-        public ForgotPasswordViewModel(Window window)
+        public ForgotPasswordViewModel(Window window, IPasswordResetFlow passwordResetFlow)
         {
             _window = window;
-            _passwordResetFlow = PasswordResetFlowFactory.Create();
+            _passwordResetFlow = passwordResetFlow ?? throw new ArgumentNullException(nameof(passwordResetFlow));
 
-            SendCodeCommand = new RelayCommand(SendCode);
-            ConfirmResetCommand = new RelayCommand(ConfirmReset);
+            SendCodeCommand = new AsyncRelayCommand(SendCodeAsync);
+            ConfirmResetCommand = new AsyncRelayCommand(ConfirmResetAsync);
             CloseCommand = new RelayCommand(() => _window.Close());
         }
 
@@ -81,7 +82,7 @@ namespace TravelAgency.WPF.ViewModels
                 d.Dispose();
         }
 
-        private async void SendCode()
+        private async Task SendCodeAsync()
         {
             ErrorMessage = "";
             IsCodeSent = false;
@@ -137,7 +138,7 @@ namespace TravelAgency.WPF.ViewModels
             }
         }
 
-        private async void ConfirmReset()
+        private async Task ConfirmResetAsync()
         {
             ErrorMessage = "";
 

@@ -15,7 +15,7 @@ using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
-using TravelAgency.WPF.Views;
+using TravelAgency.WPF.Services.Navigation;
 
 namespace TravelAgency.WPF.ViewModels.AgentVM
 {
@@ -32,6 +32,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         private readonly IUserRepository _userRepository;
         private readonly IBookingRepository _bookingRepository;
         private readonly IBookingApprovalHandler _bookingApprovalChain;
+        private readonly INavigationService _navigation;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
         public ObservableCollection<Booking> PendingBookings { get; set; }
@@ -174,22 +175,25 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand ShowRejectedBookingsCommand { get; }
 
 
-        public AgentViewModel()
-           : this(new EfTripPackageRepository(), new TripCreationService(), new EfBookingRepository())
-        {
-        }
-
-
-
         public AgentViewModel(
             ITripPackageRepository repo,
             TripCreationService tripCreationService,
-            IBookingRepository bookingRepository)
+            IBookingRepository bookingRepository,
+            IUserRepository userRepository,
+            BookingNotificationService notificationService,
+            BookingService bookingService,
+            BookingAccessService bookingAccessService,
+            BookingApprovalChainFactory approvalChainFactory,
+            INavigationService navigation)
         {
-            _repo = repo;
-            _tripCreationService = tripCreationService;
-            _bookingRepository = bookingRepository;
-            _bookingApprovalChain = BuildBookingApprovalChain();
+            _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+            _tripCreationService = tripCreationService ?? throw new ArgumentNullException(nameof(tripCreationService));
+            _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _realBookingService = bookingService ?? throw new ArgumentNullException(nameof(bookingService));
+            _bookingApprovalChain = (approvalChainFactory ?? throw new ArgumentNullException(nameof(approvalChainFactory))).Create();
+            _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
 
             TripsView = CollectionViewSource.GetDefaultView(Trips);
             TripsView.Filter = FilterTrips;
@@ -213,24 +217,14 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             Trips.CollectionChanged += (_, __) => RefreshStats();
 
-            using (var db = TravelAgencyDbContextFactory.Create())
-                db.Database.Migrate();
-
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
                 ?? throw new InvalidOperationException("User not authenticated.");
 
-            var realBookingAccessService = new BookingAccessService(_bookingRepository, _repo);
-            _bookingService = new BookingAccessProxy(realBookingAccessService, currentUser);
-
-            _notificationService = BookingNotificationService.Instance;
-            _realBookingService = new BookingService(
-                _bookingRepository,
-                _repo,
-                BookingNotificationService.Instance);
+            _bookingService = new BookingAccessProxy(
+                bookingAccessService ?? throw new ArgumentNullException(nameof(bookingAccessService)),
+                currentUser);
 
             _notificationService.Attach(this);
-
-            _userRepository = new EfUserRepository();
 
             PendingBookings = new ObservableCollection<Booking>();
 
@@ -347,22 +341,6 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             LoadBookingsFromIterator(iterator);
         }
 
-        private IBookingApprovalHandler BuildBookingApprovalChain()
-        {
-            var clientHandler = new ClientExistsHandler();
-            var tripHandler = new TripExistsHandler();
-            var statusHandler = new BookingStatusPendingHandler();
-            var seatsHandler = new SeatsAvailableHandler();
-            var priceHandler = new PriceValidationHandler();
-
-            clientHandler
-                .SetNext(tripHandler)
-                .SetNext(statusHandler)
-                .SetNext(seatsHandler)
-                .SetNext(priceHandler);
-
-            return clientHandler;
-        }
         private void CreateQuick()
         {
             try
@@ -442,14 +420,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     FinalPrice = price
                 };
 
-                var builder = new Core.Patterns.Builders.TripPackageBuilder();
-                var director = new Core.Patterns.Builders.TripDirector(builder);
-
-                var trip = director.Build(request);
-
-                
-
-                
+                var trip = _tripCreationService.CreateTrip(request);
 
                 _repo.Add(trip);
 
@@ -522,7 +493,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
                 int selectedId = SelectedTrip.Id;
 
-                var window = new CreatePackageWindow(SelectedTrip);
+                var window = _navigation.CreateEditPackageWindow(SelectedTrip);
                 var result = window.ShowDialog();
 
                 if (result == true)

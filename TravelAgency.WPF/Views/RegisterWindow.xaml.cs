@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using TravelAgency.WPF.ViewModels;
 
 namespace TravelAgency.WPF.Views
@@ -8,7 +9,7 @@ namespace TravelAgency.WPF.Views
         public RegisterWindow()
         {
             InitializeComponent();
-            DataContext = new RegisterViewModel(this);
+            DataContext = ActivatorUtilities.CreateInstance<RegisterViewModel>(App.Services, this);
         }
 
         private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e)

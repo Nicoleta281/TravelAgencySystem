@@ -9,8 +9,8 @@ namespace TravelAgency.Core.Models.TripPkg.Stay
 {
     public class Apartment : IStay
     {
-        public string Name { get; set; }
-        public string Address { get; set; }
+        public string Name { get; set; } = "";
+        public string Address { get; set; } = "";
 
         public void CheckIn() { }
 

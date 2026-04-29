@@ -2,21 +2,27 @@ using System.Windows;
 using TravelAgency.Core.Patterns.Adapters.SerpApi;
 using TravelAgency.Core.Services;
 using TravelAgency.Core.Models.Locations;
+using Microsoft.Extensions.DependencyInjection;
+using TravelAgency.Core.Interfaces;
 using TravelAgency.WPF.ViewModels.AgentVM;
+using TravelAgency.WPF.Services.Navigation;
 
 namespace TravelAgency.WPF.Views.Agent
 {
     public partial class AgentWindow : Window
     {
+        private readonly INavigationService _navigation =
+            App.Services.GetRequiredService<INavigationService>();
+
         public AgentWindow()
         {
             InitializeComponent();
-            DataContext = new TravelAgency.WPF.ViewModels.AgentVM.AgentViewModel();
+            DataContext = ActivatorUtilities.CreateInstance<AgentViewModel>(App.Services);
         }
 
         private void CreatePackage_Click(object sender, RoutedEventArgs e)
         {
-            var window = new CreatePackageWindow();
+            var window = _navigation.CreateNewPackageWindow();
             var result = window.ShowDialog();
 
             if (result == true && DataContext is AgentViewModel vm)
@@ -27,10 +33,8 @@ namespace TravelAgency.WPF.Views.Agent
 
         private void QuickCreatePackage_Click(object sender, RoutedEventArgs e)
         {
-            var window = new QuickCreatePackageWindow
-            {
-                Owner = this
-            };
+            var window = _navigation.CreateQuickCreatePackageWindow();
+            window.Owner = this;
 
             var result = window.ShowDialog();
 
@@ -48,7 +52,7 @@ namespace TravelAgency.WPF.Views.Agent
             if (DataContext is not AgentViewModel vm || vm.SelectedTrip == null)
                 return;
 
-            var window = new CreatePackageWindow(vm.SelectedTrip);
+            var window = _navigation.CreateEditPackageWindow(vm.SelectedTrip);
             var result = window.ShowDialog();
 
             if (result == true)
@@ -80,8 +84,8 @@ namespace TravelAgency.WPF.Views.Agent
 
                 MessageBox.Show($"Cheia exista. Lungime: {key.Length}");
 
-                var adapter = new SerpApiHotelAdapter();
-                var service = new HotelSearchService(adapter);
+                var provider = App.Services.GetRequiredService<IHotelSearchProvider>();
+                var service = new HotelSearchService(provider);
 
                 var hotels = await service.SearchHotelsAsync(
                     "Paris",

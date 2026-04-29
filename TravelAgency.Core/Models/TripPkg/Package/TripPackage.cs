@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TravelAgency.Core.Interfaces;
+using TravelAgency.Core.Patterns.Bridge;
 using TravelAgency.Core.Patterns.Composite;
 using TravelAgency.Core.Patterns.Flyweight;
 using TravelAgency.Core.Patterns.Prototypes;
@@ -47,6 +48,10 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public string TransportDisplayName { get; set; } = "";
         public string StayDisplayName { get; set; } = "";
         public IExtraServiceComponent? ExtraServiceBundle { get; set; }
+
+        // Bridge (Abstraction). The itinerary delegates to Transport/Stay implementors,
+        // making the "experience" hierarchy independent from implementor hierarchies.
+        public ITravelItinerary? Itinerary { get; set; }
 
         public int DaysCount
         {

@@ -20,12 +20,16 @@ namespace TravelAgency.Core.Patterns.Facades
         private readonly ITripPackageRepository _tripRepository;
         private readonly TripCreationService _tripCreationService;
 
+        [Obsolete("Prefer injecting dependencies (DI). Parameterless facade hides real dependencies and is hard to test.")]
         public TravelPackageFacade()
+            : this(
+                locationProvider: null!,
+                hotelProvider: null!,
+                tripRepository: null!,
+                tripCreationService: null!)
         {
-            _locationProvider = new GeoDbLocationAdapter();
-            _hotelProvider = new SerpApiHotelAdapter();
-            _tripRepository = new EfTripPackageRepository();
-            _tripCreationService = new TripCreationService();
+            throw new InvalidOperationException(
+                "TravelPackageFacade must be constructed via DI with explicit dependencies.");
         }
 
         public TravelPackageFacade(
@@ -34,10 +38,10 @@ namespace TravelAgency.Core.Patterns.Facades
             ITripPackageRepository tripRepository,
             TripCreationService tripCreationService)
         {
-            _locationProvider = locationProvider;
-            _hotelProvider = hotelProvider;
-            _tripRepository = tripRepository;
-            _tripCreationService = tripCreationService;
+            _locationProvider = locationProvider ?? throw new ArgumentNullException(nameof(locationProvider));
+            _hotelProvider = hotelProvider ?? throw new ArgumentNullException(nameof(hotelProvider));
+            _tripRepository = tripRepository ?? throw new ArgumentNullException(nameof(tripRepository));
+            _tripCreationService = tripCreationService ?? throw new ArgumentNullException(nameof(tripCreationService));
         }
 
         public async Task<List<LocationOption>> SearchLocationsAsync(string query, int maxResults = 10)

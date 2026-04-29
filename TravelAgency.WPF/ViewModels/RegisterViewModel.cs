@@ -9,6 +9,7 @@ using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Commands;
 using TravelAgency.WPF.Views;
+using TravelAgency.WPF.Services.Navigation;
 
 namespace TravelAgency.WPF.ViewModels
 {
@@ -16,6 +17,7 @@ namespace TravelAgency.WPF.ViewModels
     {
         private readonly Window _registerWindow;
         private readonly RegistrationService _registrationService;
+        private readonly INavigationService _navigation;
 
         private string _email = "";
         private string _username = "";
@@ -56,10 +58,14 @@ namespace TravelAgency.WPF.ViewModels
         public ICommand RegisterCommand { get; }
         public ICommand BackToLoginCommand { get; }
 
-        public RegisterViewModel(Window registerWindow)
+        public RegisterViewModel(
+            Window registerWindow,
+            RegistrationService registrationService,
+            INavigationService navigation)
         {
             _registerWindow = registerWindow;
-            _registrationService = new RegistrationService(new EfUserRepository());
+            _registrationService = registrationService ?? throw new ArgumentNullException(nameof(registrationService));
+            _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
 
             RegisterCommand = new RelayCommand(Register);
             BackToLoginCommand = new RelayCommand(BackToLogin);
@@ -92,9 +98,7 @@ namespace TravelAgency.WPF.ViewModels
                 };
                 dialog.ShowDialog();
 
-                var loginWindow = new LoginWindow();
-                loginWindow.Show();
-                _registerWindow.Close();
+                _navigation.ShowLoginAndClose(_registerWindow);
             }
             catch (ValidationException ex)
             {
@@ -112,9 +116,7 @@ namespace TravelAgency.WPF.ViewModels
 
         private void BackToLogin()
         {
-            var loginWindow = new LoginWindow();
-            loginWindow.Show();
-            _registerWindow.Close();
+            _navigation.ShowLoginAndClose(_registerWindow);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace TravelAgency.WPF.Views
 
         private List<HotelSearchOption> _hotelResults = new();
         private string? _selectedHotelThumbnailUrl;
-        private readonly TravelPackageFacade _facade = new TravelPackageFacade();
+        private readonly TravelPackageFacade _facade;
         private List<LocationOption> _locationResults = new();
         private CancellationTokenSource? _locationSearchCts;
         private CancellationTokenSource? _countrySearchCts;
@@ -44,8 +44,9 @@ namespace TravelAgency.WPF.Views
         /// <summary>Used to cancel in-flight Geo lookups when leaving Step 2 (their continuations would reopen popups over later steps).</summary>
         private int _lastWizardStep = 1;
 
-        public CreatePackageWindow(TripPackage? tripToEdit = null, int initialStep = 1)
+        public CreatePackageWindow(TravelPackageFacade facade, TripPackage? tripToEdit = null, int initialStep = 1)
         {
+            _facade = facade ?? throw new System.ArgumentNullException(nameof(facade));
             InitializeComponent();
 
             BasePriceTextBox.TextChanged += (s, e) => RecalculatePrice();

@@ -32,6 +32,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         private readonly IUserRepository _userRepository;
         private readonly BookingNotificationService _notificationService;
         private readonly IBookingRepository _bookingRepository;
+        private readonly ITripPackageRepository _tripPackageRepository;
         public Visibility PackagesVisibility
         {
             get => _packagesVisibility;
@@ -121,22 +122,26 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             }
         }
 
-        public ClientViewModel()
+        public ClientViewModel(
+            IBookingRepository bookingRepository,
+            ITripPackageRepository tripPackageRepository,
+            IUserRepository userRepository,
+            BookingNotificationService notificationService,
+            BookingAccessService bookingAccessService)
         {
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
                 ?? throw new InvalidOperationException("User not authenticated.");
 
-            var bookingRepository = new EfBookingRepository();
-            var tripPackageRepository = new EfTripPackageRepository();
+            _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
+            _tripPackageRepository = tripPackageRepository ?? throw new ArgumentNullException(nameof(tripPackageRepository));
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 
             _bookingService = new BookingAccessProxy(
-                new BookingAccessService(bookingRepository, tripPackageRepository),
+                bookingAccessService ?? throw new ArgumentNullException(nameof(bookingAccessService)),
                 currentUser);
-            _userRepository = new EfUserRepository();
-            _notificationService = BookingNotificationService.Instance;
             _notificationService.Attach(this);
 
-            _bookingRepository = bookingRepository;
             LogoutCommand = new RelayCommand(Logout);
 
             _currentClientUsername = currentUser.Username ?? "";
@@ -181,8 +186,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
             try
             {
-                var repo = new EfTripPackageRepository();
-                var trips = repo.GetAll();
+                var trips = _tripPackageRepository.GetAll();
 
                 foreach (var trip in trips)
                 {

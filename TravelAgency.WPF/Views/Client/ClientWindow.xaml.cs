@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.WPF.ViewModels.ClientVM;
 
@@ -10,7 +11,7 @@ namespace TravelAgency.WPF.Views
         public ClientWindow()
         {
             InitializeComponent();
-            DataContext = new ClientViewModel();
+            DataContext = ActivatorUtilities.CreateInstance<ClientViewModel>(App.Services);
         }
 
         private void ViewDetails_Click(object sender, RoutedEventArgs e)

@@ -9,301 +9,786 @@
         Height="800"
         Width="1400"
         WindowStartupLocation="CenterScreen"
-        Background="#F4F7FB">
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        FontFamily="Segoe UI Variable Display, Segoe UI, SystemFonts.MessageFontFamily"
+        Background="#0B1220">
     <Window.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:CancellationRatePieGeometryConverter x:Key="CancellationRatePieGeometryConverter"/>
+
+        <DrawingBrush x:Key="AdminHexMeshBrush"
+                      TileMode="Tile"
+                      Viewport="0,0,52,46"
+                      ViewportUnits="Absolute"
+                      Opacity="0.12">
+            <DrawingBrush.Drawing>
+                <GeometryDrawing Brush="Transparent">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#5EEAD4" Thickness="0.65"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 26,3 L45,14 L45,34 L26,45 L7,34 L7,14 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
+        <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0B1220" Offset="0"/>
+            <GradientStop Color="#0F1B33" Offset="0.55"/>
+            <GradientStop Color="#111C35" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="SidebarBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#0C1929" Offset="0"/>
+            <GradientStop Color="#0F2847" Offset="1"/>
+        </LinearGradientBrush>
+
+        <DropShadowEffect x:Key="ElevatedShadow"
+                          BlurRadius="28"
+                          ShadowDepth="14"
+                          Opacity="0.22"
+                          Color="#000000"/>
+
+        <!-- Card „floating” ca în mockup-uri dashboard moderne -->
+        <DropShadowEffect x:Key="MagpieCardFloat"
+                          BlurRadius="26"
+                          ShadowDepth="10"
+                          Opacity="0.09"
+                          Color="#0C4A6E"
+                          Direction="270"/>
+
+        <DropShadowEffect x:Key="PillAmbientShadow"
+                          BlurRadius="12"
+                          ShadowDepth="3"
+                          Opacity="0.09"
+                          Color="#134E4A"
+                          Direction="270"/>
+
+        <LinearGradientBrush x:Key="ChromePillFaceBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#F1F5F9" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="PrimaryButtonFaceBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#2DD4BF" Offset="0"/>
+            <GradientStop Color="#0D9488" Offset="1"/>
+        </LinearGradientBrush>
+
+        <ControlTemplate x:Key="AdminStereoPillTemplate" TargetType="Button">
+            <Border x:Name="ShadowHost"
+                    Background="Transparent"
+                    CornerRadius="13"
+                    Padding="0,1,0,2"
+                    Effect="{StaticResource PillAmbientShadow}">
+                <Border x:Name="Root"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="12">
+                    <ContentPresenter HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Margin="{TemplateBinding Padding}"
+                                      RecognizesAccessKey="True"/>
+                </Border>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="ShadowHost" Property="Opacity" Value="0.55"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <LinearGradientBrush x:Key="MainSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F0F9FF" Offset="0"/>
+            <GradientStop Color="#E0F2FE" Offset="0.5"/>
+            <GradientStop Color="#ECFEFF" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="StereoKpiFaceBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#F0FDFA" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="StereoSheetFaceBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#F8FAFC" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="StereoShelfInsetBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#F1F5F9" Offset="1"/>
+        </LinearGradientBrush>
+
+        <Style x:Key="StereoKpiCard" TargetType="Border">
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="Background" Value="{StaticResource StereoKpiFaceBrush}"/>
+            <Setter Property="Effect" Value="{StaticResource MagpieCardFloat}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="ClipToBounds" Value="False"/>
+        </Style>
+
+        <Style x:Key="StereoSheet" TargetType="Border">
+            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="Padding" Value="22"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="Background" Value="{StaticResource StereoSheetFaceBrush}"/>
+            <Setter Property="Effect" Value="{StaticResource MagpieCardFloat}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="ClipToBounds" Value="False"/>
+        </Style>
+
+        <Style x:Key="CardActionBar" TargetType="Border">
+            <Setter Property="Background" Value="#F0FDFA"/>
+            <Setter Property="BorderBrush" Value="#CCFBF1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <Style x:Key="NavSidebarButton" TargetType="Button">
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="Background" Value="#14FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#26FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#22FFFFFF"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#3AFFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#10FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NavSidebarButtonActive" TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+            <Setter Property="Background" Value="#0D9488"/>
+            <Setter Property="BorderBrush" Value="#5EEAD4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#14B8A6"/>
+                    <Setter Property="BorderBrush" Value="#99F6E4"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#0F766E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ChromePillButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="Background" Value="{StaticResource ChromePillFaceBrush}"/>
+            <Setter Property="BorderBrush" Value="#C8D4E8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template" Value="{StaticResource AdminStereoPillTemplate}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFFFFF"/>
+                    <Setter Property="BorderBrush" Value="#94A3B8"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#E8EDF5"/>
+                    <Setter Property="BorderBrush" Value="#64748B"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DangerPillButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template" Value="{StaticResource AdminStereoPillTemplate}"/>
+            <Setter Property="Foreground" Value="#B91C1C"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#FFF1F2" Offset="0"/>
+                        <GradientStop Color="#FECACA" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#F87171"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#FEE2E2" Offset="0"/>
+                                <GradientStop Color="#FCA5A5" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="BorderBrush" Value="#EF4444"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#FECACA"/>
+                    <Setter Property="BorderBrush" Value="#DC2626"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SuccessPillButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template" Value="{StaticResource AdminStereoPillTemplate}"/>
+            <Setter Property="Foreground" Value="#15803D"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#F0FDF4" Offset="0"/>
+                        <GradientStop Color="#BBF7D0" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#4ADE80"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#DCFCE7" Offset="0"/>
+                                <GradientStop Color="#86EFAC" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="BorderBrush" Value="#22C55E"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#BBF7D0"/>
+                    <Setter Property="BorderBrush" Value="#15803D"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="InfoPillButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template" Value="{StaticResource AdminStereoPillTemplate}"/>
+            <Setter Property="Foreground" Value="#1D4ED8"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#F8FAFF" Offset="0"/>
+                        <GradientStop Color="#BFDBFE" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#60A5FA"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#EFF6FF" Offset="0"/>
+                                <GradientStop Color="#93C5FD" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="BorderBrush" Value="#2563EB"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#93C5FD"/>
+                    <Setter Property="BorderBrush" Value="#1D4ED8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PrimarySolidButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource PrimaryButtonFaceBrush}"/>
+            <Setter Property="BorderBrush" Value="#0F766E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template" Value="{StaticResource AdminStereoPillTemplate}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#14B8A6"/>
+                    <Setter Property="BorderBrush" Value="#0D9488"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#0F766E"/>
+                    <Setter Property="BorderBrush" Value="#134E4A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="AdminScrollPageButton" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AdminScrollThumbVertical" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="T"
+                                MinHeight="28"
+                                Width="6"
+                                CornerRadius="3"
+                                HorizontalAlignment="Center"
+                                Background="#94A3B8"
+                                Opacity="0.85"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="T" Property="Background" Value="#64748B"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="T" Property="Background" Value="#475569"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <ControlTemplate x:Key="AdminVerticalScrollBarTemplate" TargetType="ScrollBar">
+            <Grid Width="10" SnapsToDevicePixels="True">
+                <Border Width="6"
+                        HorizontalAlignment="Center"
+                        CornerRadius="3"
+                        Background="#1A0F172A"
+                        Margin="0,4"/>
+                <Track x:Name="PART_Track" IsDirectionReversed="True" Focusable="False">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Style="{StaticResource AdminScrollPageButton}"
+                                      Command="{x:Static ScrollBar.PageUpCommand}"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Style="{StaticResource AdminScrollPageButton}"
+                                      Command="{x:Static ScrollBar.PageDownCommand}"/>
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb Style="{StaticResource AdminScrollThumbVertical}"/>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <Style x:Key="AdminScrollBarStyle" TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template" Value="{StaticResource AdminVerticalScrollBarTemplate}"/>
+        </Style>
+
+        <Style x:Key="GlassPanel" TargetType="Border">
+            <Setter Property="Background" Value="#CCFFFFFF"/>
+            <Setter Property="BorderBrush" Value="#33FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Effect" Value="{StaticResource ElevatedShadow}"/>
+        </Style>
+
+        <Style x:Key="AdminDataGridColumnHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#F0FDFA"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+
+        <Style x:Key="ModernDataGridRow" TargetType="DataGridRow">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsMouseOver" Value="True"/>
+                        <Condition Property="IsSelected" Value="False"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="#ECFEFF"/>
+                </MultiTrigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#0F766E"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="AdminDataGridTextElement" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}"
+                             Value="True">
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ModernDataGrid" TargetType="DataGrid">
+            <Setter Property="RowHeight" Value="42"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#F1F5F9"/>
+            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="#FFFFFF"/>
+            <Setter Property="AlternatingRowBackground" Value="#F8FAFC"/>
+            <Setter Property="ColumnHeaderStyle" Value="{StaticResource AdminDataGridColumnHeader}"/>
+            <Setter Property="RowStyle" Value="{StaticResource ModernDataGridRow}"/>
+        </Style>
     </Window.Resources>
-    
-        <Grid>
+
+    <Grid Background="{StaticResource AppBackgroundBrush}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="270"/>
+            <ColumnDefinition Width="278"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- SIDEBAR -->
-        <Border Grid.Column="0" Background="#17335C">
+        <Border Grid.Column="0"
+                Background="{StaticResource SidebarBrush}"
+                BorderBrush="#22FFFFFF"
+                BorderThickness="0,0,1,0">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.35" Color="#000000" Direction="270"/>
+            </Border.Effect>
             <DockPanel LastChildFill="True">
 
-                <StackPanel DockPanel.Dock="Top" Margin="24,24,24,16">
-                    <TextBlock Text="Travel Agency Admin"
+                <StackPanel DockPanel.Dock="Top" Margin="22,26,22,8">
+                    <TextBlock Text="Travel Agency"
+                               Foreground="#94A3B8"
+                               FontSize="12"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="Admin"
                                Foreground="White"
-                               FontSize="20"
-                               FontWeight="Bold"/>
-                    <TextBlock Text="Administration Panel"
-                               Foreground="#B8C7E0"
-                               FontSize="14"
-                               Margin="0,6,0,0"/>
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Margin="0,2,0,0"/>
+                    <TextBlock Text="Control panel"
+                               Foreground="#94A3B8"
+                               FontSize="13"
+                               Margin="0,8,0,0"/>
                 </StackPanel>
 
-                <StackPanel DockPanel.Dock="Top" Margin="16,10,16,0">
+                <StackPanel DockPanel.Dock="Top" Margin="14,8,14,0">
                     <Button Content="Dashboard"
-                            Command="{Binding ShowDashboardCommand}"
-                            Height="52"
-                            Margin="0,0,0,10"
-                            Background="#2563EB"
-                            Foreground="White"
-                            BorderBrush="Transparent"
-                            FontSize="16"
-                            FontWeight="SemiBold"/>
+                            Command="{Binding ShowDashboardCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDashboardSection}" Value="True">
+                                        <Setter Property="Background" Value="#0D9488"/>
+                                        <Setter Property="BorderBrush" Value="#5EEAD4"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
                     <Button Content="User Management"
-                            Height="52"
-                            Margin="0,0,0,10"
-                            Background="#21406D"
-                            Foreground="White"
-                            BorderBrush="Transparent"
-                            FontSize="15"/>
-
-                    <Button Content="Role Management"
-                            Height="52"
-                            Margin="0,0,0,10"
-                            Background="#21406D"
-                            Foreground="White"
-                            BorderBrush="Transparent"
-                            FontSize="15"/>
-
+                            Command="{Binding ShowUserManagementCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsUserManagementSection}" Value="True">
+                                        <Setter Property="Background" Value="#0D9488"/>
+                                        <Setter Property="BorderBrush" Value="#5EEAD4"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="Bookings Control"
-                            Height="52"
-                            Margin="0,0,0,10"
-                            Background="#21406D"
-                            Foreground="White"
-                            BorderBrush="Transparent"
-                            FontSize="15"/>
+                            Command="{Binding ShowBookingsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBookingsSection}" Value="True">
+                                        <Setter Property="Background" Value="#0D9488"/>
+                                        <Setter Property="BorderBrush" Value="#5EEAD4"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
                     <Button Content="Analytics Reports"
-        Command="{Binding ShowAnalyticsCommand}"
-        Height="52"
-        Margin="0,0,0,10"
-        Background="#2563EB"
-        Foreground="White"
-        BorderBrush="Transparent"
-        FontSize="15"
-        FontWeight="SemiBold"/>
+                            Command="{Binding ShowAnalyticsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAnalyticsSection}" Value="True">
+                                        <Setter Property="Background" Value="#0D9488"/>
+                                        <Setter Property="BorderBrush" Value="#5EEAD4"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
                     <Button Content="Financial Settings"
-                            Height="52"
-                            Margin="0,0,0,10"
-                            Background="#21406D"
-                            Foreground="White"
-                            BorderBrush="Transparent"
-                            FontSize="15"/>
-
+                            Command="{Binding ShowFinancialSettingsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFinancialSection}" Value="True">
+                                        <Setter Property="Background" Value="#0D9488"/>
+                                        <Setter Property="BorderBrush" Value="#5EEAD4"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="Package Moderation"
-                            Height="52"
-                            Margin="0,0,0,10"
-                            Background="#21406D"
-                            Foreground="White"
-                            BorderBrush="Transparent"
-                            FontSize="15"/>
+                            Command="{Binding ShowPackageModerationCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavSidebarButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPackageModerationSection}" Value="True">
+                                        <Setter Property="Background" Value="#0D9488"/>
+                                        <Setter Property="BorderBrush" Value="#5EEAD4"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </StackPanel>
 
                 <Border DockPanel.Dock="Bottom"
-                        Margin="16,20,16,20"
+                        Margin="14,16,14,18"
                         Padding="14"
-                        CornerRadius="14"
-                        Background="#21406D">
+                        CornerRadius="16"
+                        Background="#18FFFFFF"
+                        BorderBrush="#28FFFFFF"
+                        BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="48" Height="48" Fill="#DDE7F5"/>
+                        <Ellipse Width="46" Height="46">
+                            <Ellipse.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#E2E8F0" Offset="0"/>
+                                    <GradientStop Color="#CBD5E1" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
                         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Admin"
                                        Foreground="White"
-                                       FontSize="16"
+                                       FontSize="15"
                                        FontWeight="Bold"/>
                             <TextBlock Text="System Administrator"
-                                       Foreground="#C8D4E8"
-                                       FontSize="13"/>
+                                       Foreground="#94A3B8"
+                                       FontSize="12"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </DockPanel>
         </Border>
 
+        <!-- Main workspace: fundal + pattern hex discret + conținut -->
+        <Grid Grid.Column="1">
+            <Border Background="{StaticResource MainSurfaceBrush}"/>
+            <Rectangle Fill="{StaticResource AdminHexMeshBrush}" IsHitTestVisible="False"/>
+            <Grid Background="Transparent">
         <!-- MAIN CONTENT -->
-        <ScrollViewer Grid.Column="1"
-              Visibility="{Binding IsDashboardSection, Converter={StaticResource BoolToVisibilityConverter}}"
+        <ScrollViewer Visibility="{Binding IsDashboardSection, Converter={StaticResource BoolToVisibilityConverter}}"
               VerticalScrollBarVisibility="Auto"
               HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="28">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+            </ScrollViewer.Resources>
+            <Grid Margin="24,24,24,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <!-- TOP BAR -->
-                <DockPanel Margin="0,0,0,20">
-                    <StackPanel DockPanel.Dock="Left">
-                        <TextBlock Text="Admin Dashboard"
-                                   FontSize="30"
-                                   FontWeight="Bold"
-                                   Foreground="#1F2937"/>
-                        <TextBlock Text="User access, analytics, moderation and financial control"
-                                   FontSize="14"
-                                   Foreground="#6B7280"
-                                   Margin="0,6,0,0"/>
-                    </StackPanel>
-
-                    <StackPanel DockPanel.Dock="Right"
-            Orientation="Horizontal"
-            HorizontalAlignment="Right">
-                        <Button Content="Refresh"
-            Command="{Binding RefreshDashboardCommand}"
-            Margin="0,0,10,0"
-            Padding="16,8"
-            Background="White"
-            BorderBrush="#D6DCE5"/>
-
-                        <Button Content="Settings"
-            Margin="0,0,10,0"
-            Padding="16,8"
-            Background="White"
-            BorderBrush="#D6DCE5"/>
-
-                        <Button Content="Logout"
-            Command="{Binding LogoutCommand}"
-            Padding="16,8"
-            Background="#FEF2F2"
-            Foreground="#B91C1C"
-            BorderBrush="#FECACA"/>
-                    </StackPanel>
-                </DockPanel>
-
-                <!-- TOP STAT CARDS -->
-                <UniformGrid Columns="4" Margin="0,0,0,22">
-                    <Border Background="White" CornerRadius="16" Padding="18" Margin="0,0,14,0">
-                        <StackPanel>
-                            <TextBlock Text="Total Users" FontSize="15" Foreground="#6B7280"/>
-                            <TextBlock Text="{Binding TotalUsersCount}"
-                                       FontSize="30"
+                <!-- TOP BAR (shell alb, ca bara din dashboard-uri moderne) -->
+                <Border Grid.Row="0"
+                        Margin="0,0,0,18"
+                        Padding="20,14"
+                        Background="#FDFEFE"
+                        CornerRadius="18"
+                        BorderBrush="#E8EDF4"
+                        BorderThickness="1"
+                        Effect="{StaticResource MagpieCardFloat}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="Travel Agency"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#64748B"/>
+                            <TextBlock Text="Admin Dashboard"
+                                       FontSize="26"
                                        FontWeight="Bold"
-                                       Foreground="#111827"
-                                       Margin="0,8,0,0"/>
+                                       Foreground="#0F172A"
+                                       Margin="0,4,0,0"/>
+                            <TextBlock Text="Users, revenue, moderation &amp; finance"
+                                       FontSize="13"
+                                       Foreground="#64748B"
+                                       Margin="0,6,0,0"/>
                         </StackPanel>
-                    </Border>
 
-                    <Border Background="White" CornerRadius="16" Padding="18" Margin="0,0,14,0">
-                        <StackPanel>
-                            <TextBlock Text="Pending Bookings" FontSize="15" Foreground="#6B7280"/>
-                            <TextBlock Text="{Binding PendingBookingsCount}"
-                                       FontSize="30"
-                                       FontWeight="Bold"
-                                       Foreground="#111827"
-                                       Margin="0,8,0,0"/>
+                        <StackPanel DockPanel.Dock="Right"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Button Content="Refresh"
+                                    Command="{Binding RefreshDashboardCommand}"
+                                    Style="{StaticResource ChromePillButton}"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="Settings"
+                                    Style="{StaticResource ChromePillButton}"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="Logout"
+                                    Command="{Binding LogoutCommand}"
+                                    Style="{StaticResource DangerPillButton}"/>
                         </StackPanel>
-                    </Border>
+                    </DockPanel>
+                </Border>
 
-                    <Border Background="White" CornerRadius="16" Padding="18" Margin="0,0,14,0">
-                        <StackPanel>
-                            <TextBlock Text="Monthly Revenue" FontSize="15" Foreground="#6B7280"/>
-                            <TextBlock Text="{Binding MonthlyRevenueText}"
-                                       FontSize="30"
-                                       FontWeight="Bold"
-                                       Foreground="#111827"
-                                       Margin="0,8,0,0"/>
-                        </StackPanel>
-                    </Border>
+                <!-- KPI: raft ancorat + coloane fixe (fără UniformGrid) -->
+                <Border Grid.Row="1"
+                        Margin="0,0,0,22"
+                        CornerRadius="26"
+                        Padding="14,12"
+                        BorderThickness="1"
+                        BorderBrush="#D1D5DB"
+                        Background="{StaticResource StereoShelfInsetBrush}"
+                        Effect="{StaticResource MagpieCardFloat}"
+                        SnapsToDevicePixels="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Border Background="White" CornerRadius="16" Padding="18">
-                        <StackPanel>
-                            <TextBlock Text="Cancellation Rate" FontSize="15" Foreground="#6B7280"/>
-                            <TextBlock Text="{Binding CancellationRateText}"
-                                       FontSize="30"
-                                       FontWeight="Bold"
-                                       Foreground="#DC2626"
-                                       Margin="0,8,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </UniformGrid>
+                        <Border Grid.Column="0" Style="{StaticResource StereoKpiCard}" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Total users" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding TotalUsersCount}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#0F172A"
+                                           Margin="0,6,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource StereoKpiCard}" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Pending bookings" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding PendingBookingsCount}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#0F172A"
+                                           Margin="0,6,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource StereoKpiCard}" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Monthly revenue" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding MonthlyRevenueText}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#0F172A"
+                                           Margin="0,6,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="3" Style="{StaticResource StereoKpiCard}" Margin="6,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Cancellation rate" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding CancellationRateText}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#DC2626"
+                                           Margin="0,6,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
 
                 <!-- MAIN GRID -->
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2.1*"/>
-                        <ColumnDefinition Width="1.1*"/>
-                    </Grid.ColumnDefinitions>
+                <Grid Grid.Row="2" Margin="0,4,0,0">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- USER MANAGEMENT -->
-                    <Border Grid.Row="0"
-                            Grid.Column="0"
-                            Background="White"
-                            CornerRadius="18"
-                            Padding="20"
-                            Margin="0,0,18,18">
-                        <StackPanel>
-                            <DockPanel Margin="0,0,0,16">
-                                <TextBlock DockPanel.Dock="Left"
-                                           Text="User Management"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="#1F2937"/>
-
-                                <Button DockPanel.Dock="Right"
-                                        Content="Manage Users"
-                                        Padding="18,0"
-                                        Background="#2563EB"
-                                        Foreground="White"
-                                        BorderBrush="Transparent" Height="29" Width="170"/>
-                            </DockPanel>
-
-                            <DataGrid ItemsSource="{Binding Users}"
-                                      SelectedItem="{Binding SelectedUser}"
-                                      AutoGenerateColumns="False"
-                                      HeadersVisibility="Column"
-                                      CanUserAddRows="False"
-                                      Height="280"
-                                      BorderThickness="0"
-                                      Background="White"
-                                      RowBackground="White"
-                                      AlternatingRowBackground="#F9FBFD"
-                                      GridLinesVisibility="Horizontal"
-                                      HorizontalGridLinesBrush="#E5E7EB"
-                                      VerticalGridLinesBrush="#E5E7EB"
-                                      SelectionMode="Single"
-                                      SelectionUnit="FullRow">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="User" Width="*" Binding="{Binding Username}"/>
-                                    <DataGridTextColumn Header="Email" Width="1.4*" Binding="{Binding Email}"/>
-                                    <DataGridTextColumn Header="Role" Width="*" Binding="{Binding Role}"/>
-                                    <DataGridTextColumn Header="Status" Width="*" Binding="{Binding Status}"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                                <Button Content="Block selected user"
-                                        Command="{Binding BlockUserCommand}"
-                                        Margin="0,0,10,0"
-                                        Padding="14,8"
-                                        Background="#FEF2F2"
-                                        Foreground="#B91C1C"
-                                        BorderBrush="#FECACA"/>
-
-                                <Button Content="Unblock selected user"
-                                        Command="{Binding UnblockUserCommand}"
-                                        Margin="0,0,10,0"
-                                        Padding="14,8"
-                                        Background="#ECFDF5"
-                                        Foreground="#15803D"
-                                        BorderBrush="#BBF7D0"/>
-
-                                <Button Content="Change role"
-                                        Command="{Binding ChangeRoleCommand}"
-                                        Padding="14,8"
-                                        Background="#EFF6FF"
-                                        Foreground="#1D4ED8"
-                                        BorderBrush="#BFDBFE"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-            
-
                     <!-- REVENUE / REPORTS -->
-                    <Border Grid.Row="1"
-                            Grid.Column="0"
-                            Background="White"
-                            CornerRadius="18"
-                            Padding="20"
-                            Margin="0,0,18,18">
+                    <Border Grid.Row="0"
+                            Style="{StaticResource StereoSheet}"
+                            Margin="0,0,0,18">
                         <StackPanel>
                             <TextBlock Text="Revenue and Reports"
                                        FontSize="24"
@@ -324,21 +809,92 @@
 
                                     <Border Height="180"
                                             Margin="0,12,0,0"
-                                            CornerRadius="14"
-                                            Background="#EEF4FF"
-                                            BorderBrush="#D7E3FF"
-                                            BorderThickness="1">
-                                        <Grid>
-                                            <TextBlock Text="Monthly revenue chart"
-                                                       Foreground="#6B7280"
+                                            CornerRadius="16"
+                                            BorderThickness="1"
+                                            BorderBrush="#B8C9EC">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="#F8FAFF" Offset="0"/>
+                                                <GradientStop Color="#E1E9FB" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <Grid ClipToBounds="True">
+                                            <Path Data="M 0,120 L 48,72 L 96,96 L 144,40 L 192,64 L 240,48 L 288,80 L 336,56 L 384,88 L 432,52 L 480,70 L 528,45 L 576,78 L 624,50 L 672,68 L 720,42 L 768,75 L 816,55 L 864,82 L 912,48 L 960,65 L 1008,38 L 1056,72"
+                                                  Stroke="#0D9488"
+                                                  StrokeThickness="3"
+                                                  StrokeLineJoin="Round"
+                                                  Stretch="Fill"
+                                                  VerticalAlignment="Bottom"
+                                                  Height="110"
+                                                  Margin="12,0,12,18"
+                                                  Opacity="0.85"/>
+                                            <Path Data="M 0,135 L 60,100 L 120,118 L 180,78 L 240,105 L 300,88 L 360,112 L 420,95 L 480,125 L 540,98 L 600,118 L 660,92 L 720,108 L 780,85 L 840,115 L 900,90 L 960,105 L 1020,82 L 1080,100"
+                                                  Stroke="#93C5FD"
+                                                  StrokeThickness="2"
+                                                  Stretch="Fill"
+                                                  VerticalAlignment="Bottom"
+                                                  Height="95"
+                                                  Margin="12,0,12,12"
+                                                  Opacity="0.55"/>
+                                            <TextBlock Text="Revenue trend (preview)"
+                                                       Foreground="#64748B"
                                                        HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="16"/>
+                                                       VerticalAlignment="Top"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,14,0,0"/>
                                         </Grid>
                                     </Border>
+
+                                    <Grid Margin="0,18,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Grid.Column="0"
+                                                 Width="120"
+                                                 Height="120"
+                                                 HorizontalAlignment="Left"
+                                                 VerticalAlignment="Center">
+                                            <Grid Width="100" Height="100">
+                                                <Ellipse Fill="#E0F2FE"
+                                                         Stroke="#38BDF8"
+                                                         StrokeThickness="1"/>
+                                                <Path Stroke="#E11D48"
+                                                      StrokeThickness="0.5"
+                                                      Fill="#FB7185"
+                                                      Data="{Binding CancellationRate, Converter={StaticResource CancellationRatePieGeometryConverter}}"/>
+                                                <Ellipse Width="36"
+                                                         Height="36"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center"
+                                                         Fill="{StaticResource StereoSheetFaceBrush}"
+                                                         Stroke="#CBD5E1"
+                                                         StrokeThickness="1"/>
+                                            </Grid>
+                                        </Viewbox>
+                                        <StackPanel Grid.Column="1"
+                                                    Margin="14,0,0,0"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="Distribuție risc (anulări)"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#334155"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding CancellationRateText}"
+                                                       FontSize="20"
+                                                       FontWeight="Bold"
+                                                       Foreground="#DC2626"
+                                                       Margin="0,6,0,0"/>
+                                            <TextBlock Text="Felie colorată proporțională cu rata de anulare; restul = volum estimat."
+                                                       FontSize="11"
+                                                       Foreground="#64748B"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,8,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="1" Margin="20,0,0,0" Width="200">
+                                <StackPanel Grid.Column="1" Margin="20,0,0,0" MinWidth="176">
                                     <Border Background="#F9FAFB" CornerRadius="14" Padding="16" Margin="0,0,0,12">
                                         <StackPanel>
                                             <TextBlock Text="Current Revenue"
@@ -369,220 +925,677 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- PACKAGE MODERATION -->
-                    <Border Grid.Row="1"
-                            Grid.Column="1"
-                            Background="White"
-                            CornerRadius="18"
-                            Padding="20"
-                            Margin="0,0,0,18">
-                        <StackPanel>
-                            <TextBlock Text="Package Moderation"
-                                       FontSize="24"
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- USER MANAGEMENT (pagină dedicată: rezumat, căutare, tabel, acțiuni) -->
+        <ScrollViewer Visibility="{Binding IsUserManagementSection, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+            </ScrollViewer.Resources>
+            <Grid Margin="24,24,24,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Margin="0,0,0,18"
+                        Padding="20,14"
+                        Background="#FDFEFE"
+                        CornerRadius="18"
+                        BorderBrush="#E8EDF4"
+                        BorderThickness="1"
+                        Effect="{StaticResource MagpieCardFloat}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="Travel Agency"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#64748B"/>
+                            <TextBlock Text="User management"
+                                       FontSize="26"
                                        FontWeight="Bold"
-                                       Foreground="#1F2937"/>
-
-                            <ListBox ItemsSource="{Binding PendingPackages}"
-                                     SelectedItem="{Binding SelectedPackage}"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     Margin="0,18,0,0">
-                                <ListBox.ItemContainerStyle>
-                                    <Style TargetType="ListBoxItem">
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Margin" Value="0,0,0,12"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                    </Style>
-                                </ListBox.ItemContainerStyle>
-
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Padding="12"
-                                                CornerRadius="14"
-                                                Background="#F9FBFD"
-                                                BorderBrush="#E5E7EB"
-                                                BorderThickness="1">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontSize="17"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="#111827"/>
-
-                                                <TextBlock Text="{Binding Destination, StringFormat=Destination: {0}}"
-                                                           Foreground="#6B7280"
-                                                           Margin="0,6,0,0"/>
-
-                                                <TextBlock Text="{Binding PeriodText, StringFormat=Period: {0}}"
-                                                           Foreground="#6B7280"
-                                                           Margin="0,4,0,0"/>
-
-                                                <TextBlock Text="{Binding CreatedByAgent, StringFormat=Created by: {0}}"
-                                                           Foreground="#6B7280"
-                                                           Margin="0,4,0,0"/>
-
-                                                <TextBlock Text="{Binding Status, StringFormat=Status: {0}}"
-                                                           Foreground="#2563EB"
-                                                           FontWeight="SemiBold"
-                                                           Margin="0,6,0,0"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                <Button Content="Approve selected package"
-                                        Command="{Binding ApprovePackageCommand}"
-                                        Margin="0,0,10,0"
-                                        Padding="14,8"
-                                        Background="#DCFCE7"
-                                        Foreground="#15803D"
-                                        BorderBrush="#BBF7D0"/>
-
-                                <Button Content="Reject selected package"
-                                        Command="{Binding RejectPackageCommand}"
-                                        Padding="14,8"
-                                        Background="#FEE2E2"
-                                        Foreground="#B91C1C"
-                                        BorderBrush="#FECACA"/>
-                            </StackPanel>
+                                       Foreground="#0F172A"
+                                       Margin="0,4,0,0"/>
+                            <TextBlock Text="Search accounts, then block, unblock or change role for the selected user."
+                                       FontSize="13"
+                                       Foreground="#64748B"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0"/>
                         </StackPanel>
-                    </Border>
+                        <Button DockPanel.Dock="Right"
+                                Content="Back to dashboard"
+                                Command="{Binding ShowDashboardCommand}"
+                                Style="{StaticResource ChromePillButton}"
+                                VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
 
-                    <!-- FINANCIAL SETTINGS -->
-                    <Border Grid.Row="2"
-                            Grid.Column="0"
-                            Grid.ColumnSpan="2"
-                            Background="White"
-                            CornerRadius="18"
-                            Padding="20">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="1.2*"/>
-                            </Grid.ColumnDefinitions>
+                <Border Grid.Row="1"
+                        Margin="0,0,0,18"
+                        CornerRadius="26"
+                        Padding="14,12"
+                        BorderThickness="1"
+                        BorderBrush="#D1D5DB"
+                        Background="{StaticResource StereoShelfInsetBrush}"
+                        Effect="{StaticResource MagpieCardFloat}"
+                        SnapsToDevicePixels="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource StereoKpiCard}" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Total accounts" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding TotalUsersCount}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#0F172A"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource StereoKpiCard}" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Active" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding ActiveUsersCount}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#15803D"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource StereoKpiCard}" Margin="6,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Blocked" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding BlockedUsersCount}"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#DC2626"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
 
-                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
-                                <TextBlock Text="Financial Settings"
+                <Border Grid.Row="2"
+                        Style="{StaticResource StereoSheet}">
+                    <StackPanel>
+                        <TextBlock Text="Directory"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0F172A"/>
+                        <TextBox Text="{Binding UserFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,10,0,14"
+                                 Padding="12,10"
+                                 FontSize="14"
+                                 BorderBrush="#CBD5E1"
+                                 BorderThickness="1"
+                                 Background="#FFFFFF"
+                                 ToolTipService.ToolTip="Filter by username, email, role or status (live)"/>
+
+                        <DataGrid Style="{StaticResource ModernDataGrid}"
+                                  ItemsSource="{Binding UsersView}"
+                                  SelectedItem="{Binding SelectedUser}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  MinHeight="420"
+                                  SelectionMode="Single"
+                                  SelectionUnit="FullRow">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="User" Width="*" Binding="{Binding Username}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Email" Width="1.4*" Binding="{Binding Email}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Role" Width="*" Binding="{Binding Role}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Status" Width="*" Binding="{Binding Status}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Border Style="{StaticResource CardActionBar}" Margin="0,14,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Block selected user"
+                                        Command="{Binding BlockUserCommand}"
+                                        Style="{StaticResource DangerPillButton}"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Unblock selected user"
+                                        Command="{Binding UnblockUserCommand}"
+                                        Style="{StaticResource SuccessPillButton}"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Change role"
+                                        Command="{Binding ChangeRoleCommand}"
+                                        Style="{StaticResource InfoPillButton}"/>
+                                <Button Content="Refresh list"
+                                        Command="{Binding RefreshDashboardCommand}"
+                                        Style="{StaticResource ChromePillButton}"
+                                        Margin="12,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- BOOKINGS CONTROL -->
+        <ScrollViewer Visibility="{Binding IsBookingsSection, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+            </ScrollViewer.Resources>
+            <Grid Margin="24,24,24,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Margin="0,0,0,18"
+                        Padding="20,14"
+                        Background="#FDFEFE"
+                        CornerRadius="18"
+                        BorderBrush="#E8EDF4"
+                        BorderThickness="1"
+                        Effect="{StaticResource MagpieCardFloat}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="Travel Agency"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#64748B"/>
+                            <TextBlock Text="Bookings control"
+                                       FontSize="26"
+                                       FontWeight="Bold"
+                                       Foreground="#0F172A"
+                                       Margin="0,4,0,0"/>
+                            <TextBlock Text="All reservations: filter, confirm pending requests, reject or cancel."
+                                       FontSize="13"
+                                       Foreground="#64748B"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="Back to dashboard"
+                                Command="{Binding ShowDashboardCommand}"
+                                Style="{StaticResource ChromePillButton}"
+                                VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Margin="0,0,0,18"
+                        CornerRadius="26"
+                        Padding="14,12"
+                        BorderThickness="1"
+                        BorderBrush="#D1D5DB"
+                        Background="{StaticResource StereoShelfInsetBrush}"
+                        Effect="{StaticResource MagpieCardFloat}"
+                        SnapsToDevicePixels="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource StereoKpiCard}" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Total" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding AdminBookingsTotalCount}"
                                            FontSize="24"
                                            FontWeight="Bold"
-                                           Foreground="#1F2937"/>
-
-                                <Grid Margin="0,18,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180"/>
-                                        <ColumnDefinition Width="220"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0"
-                                               Grid.Column="0"
-                                               Text="VAT Rate:"
-                                               VerticalAlignment="Center"
-                                               FontSize="15"
-                                               Margin="0,0,0,12"/>
-
-                                    <TextBox Grid.Row="0"
-                                             Grid.Column="1"
-                                             Text="{Binding VatRate, UpdateSourceTrigger=PropertyChanged}"
-                                             Height="34"
-                                             Margin="0,0,0,12"/>
-
-                                    <TextBlock Grid.Row="1"
-                                               Grid.Column="0"
-                                               Text="Global Discount:"
-                                               VerticalAlignment="Center"
-                                               FontSize="15"
-                                               Margin="0,0,0,12"/>
-
-                                    <TextBox Grid.Row="1"
-                                             Grid.Column="1"
-                                             Text="{Binding GlobalDiscount, UpdateSourceTrigger=PropertyChanged}"
-                                             Height="34"
-                                             Margin="0,0,0,12"/>
-
-                                    <TextBlock Grid.Row="2"
-                                               Grid.Column="0"
-                                               Text="Currency:"
-                                               VerticalAlignment="Center"
-                                               FontSize="15"/>
-
-                                    <ComboBox Grid.Row="2"
-                                              Grid.Column="1"
-                                              Height="34"
-                                              ItemsSource="{Binding AvailableCurrencies}"
-                                              SelectedItem="{Binding SelectedCurrency}"/>
-                                </Grid>
+                                           Foreground="#0F172A"
+                                           Margin="0,6,0,0"/>
                             </StackPanel>
-
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="Actions"
-                                           FontSize="20"
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource StereoKpiCard}" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Pending" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding AdminBookingsPendingCount}"
+                                           FontSize="24"
                                            FontWeight="Bold"
-                                           Foreground="#1F2937"
-                                           Margin="0,0,0,18"/>
-
-                                <Button Content="Save Financial Settings"
-                                        Command="{Binding SaveFinancialSettingsCommand}"
-                                        Height="42"
-                                        Margin="0,0,0,12"
-                                        Background="#2563EB"
-                                        Foreground="White"
-                                        BorderBrush="Transparent"/>
-
-                                <Button Content="Export Report"
-                                        Height="42"
-                                        Margin="0,0,0,12"
-                                        Background="White"
-                                        Foreground="#1F2937"
-                                        BorderBrush="#D1D5DB"/>
-
-                                <Button Content="View Detailed Analytics"
-                                        Height="42"
-                                        Background="White"
-                                        Foreground="#1F2937"
-                                        BorderBrush="#D1D5DB"/>
+                                           Foreground="#CA8A04"
+                                           Margin="0,6,0,0"/>
                             </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource StereoKpiCard}" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Confirmed" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding AdminBookingsConfirmedCount}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#15803D"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Style="{StaticResource StereoKpiCard}" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Rejected" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding AdminBookingsRejectedCount}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#DC2626"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="4" Style="{StaticResource StereoKpiCard}" Margin="6,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Cancelled" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding AdminBookingsCancelledCount}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#64748B"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource StereoSheet}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="220"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Reservations"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="#0F172A"
+                                       VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding BookingStatusFilters}"
+                                      SelectedItem="{Binding SelectedBookingStatusFilter, Mode=TwoWay}"
+                                      Height="36"
+                                      VerticalContentAlignment="Center"
+                                      Margin="12,0,0,0"/>
                         </Grid>
-                    </Border>
 
-                </Grid>
-            </StackPanel>
+                        <TextBox Text="{Binding BookingFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,12,0,14"
+                                 Padding="12,10"
+                                 FontSize="14"
+                                 BorderBrush="#CBD5E1"
+                                 BorderThickness="1"
+                                 Background="#FFFFFF"
+                                 ToolTipService.ToolTip="Search by client, package, status or booking id"/>
+
+                        <DataGrid Style="{StaticResource ModernDataGrid}"
+                                  ItemsSource="{Binding BookingsView}"
+                                  SelectedItem="{Binding SelectedBooking}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  MinHeight="420"
+                                  SelectionMode="Single"
+                                  SelectionUnit="FullRow">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Id" Width="56" Binding="{Binding Id}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Date" Width="140"
+                                                    Binding="{Binding BookingDate, StringFormat=dd.MM.yyyy HH:mm}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Client" Width="*" Binding="{Binding Client.Username}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Package" Width="1.2*" Binding="{Binding TripPackage.Name}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusName}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                                <DataGridTextColumn Header="Total" Width="100"
+                                                    Binding="{Binding TotalPrice, StringFormat=F2}"
+                                                    ElementStyle="{StaticResource AdminDataGridTextElement}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Border Style="{StaticResource CardActionBar}" Margin="0,14,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Confirm"
+                                        Command="{Binding ConfirmBookingCommand}"
+                                        Style="{StaticResource SuccessPillButton}"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Reject"
+                                        Command="{Binding RejectBookingCommand}"
+                                        Style="{StaticResource DangerPillButton}"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Cancel booking"
+                                        Command="{Binding CancelBookingCommand}"
+                                        Style="{StaticResource ChromePillButton}"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Refresh"
+                                        Command="{Binding RefreshBookingsCommand}"
+                                        Style="{StaticResource ChromePillButton}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </ScrollViewer>
-    
-    <Grid Grid.Column="1"
-      Margin="28"
-      Visibility="{Binding IsAnalyticsSection, Converter={StaticResource BoolToVisibilityConverter}}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="Analytics Reports"
-           FontSize="32"
-           FontWeight="Bold"
-           Foreground="#0F172A"/>
+        <!-- FINANCIAL SETTINGS -->
+        <ScrollViewer Visibility="{Binding IsFinancialSection, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+            </ScrollViewer.Resources>
+            <Grid Margin="24,24,24,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <TextBlock Text="Snapshots and live analytics overview"
-           FontSize="16"
-           Foreground="#64748B"
-           Margin="0,8,0,0"/>
-            </StackPanel>
+                <Border Grid.Row="0"
+                        Margin="0,0,0,18"
+                        Padding="20,14"
+                        Background="#FDFEFE"
+                        CornerRadius="18"
+                        BorderBrush="#E8EDF4"
+                        BorderThickness="1"
+                        Effect="{StaticResource MagpieCardFloat}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="Travel Agency"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#64748B"/>
+                            <TextBlock Text="Financial settings"
+                                       FontSize="26"
+                                       FontWeight="Bold"
+                                       Foreground="#0F172A"
+                                       Margin="0,4,0,0"/>
+                            <TextBlock Text="VAT, global discount and default currency for reports and displays."
+                                       FontSize="13"
+                                       Foreground="#64748B"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="Back to dashboard"
+                                Command="{Binding ShowDashboardCommand}"
+                                Style="{StaticResource ChromePillButton}"
+                                VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Row="1" Style="{StaticResource StereoSheet}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                            <TextBlock Text="Parameters"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="#1F2937"/>
+
+                            <Grid Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="220"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Text="VAT rate (%):"
+                                           VerticalAlignment="Center"
+                                           FontSize="15"
+                                           Margin="0,0,0,12"/>
+
+                                <TextBox Grid.Row="0"
+                                         Grid.Column="1"
+                                         Text="{Binding VatRate, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="34"
+                                         Margin="0,0,0,12"/>
+
+                                <TextBlock Grid.Row="1"
+                                           Grid.Column="0"
+                                           Text="Global discount (%):"
+                                           VerticalAlignment="Center"
+                                           FontSize="15"
+                                           Margin="0,0,0,12"/>
+
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="1"
+                                         Text="{Binding GlobalDiscount, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="34"
+                                         Margin="0,0,0,12"/>
+
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Text="Currency:"
+                                           VerticalAlignment="Center"
+                                           FontSize="15"/>
+
+                                <ComboBox Grid.Row="2"
+                                          Grid.Column="1"
+                                          Height="34"
+                                          ItemsSource="{Binding AvailableCurrencies}"
+                                          SelectedItem="{Binding SelectedCurrency}"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Actions"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       Foreground="#1F2937"
+                                       Margin="0,0,0,12"/>
+
+                            <Border Style="{StaticResource CardActionBar}">
+                                <StackPanel>
+                                    <Button Content="Save financial settings"
+                                            Command="{Binding SaveFinancialSettingsCommand}"
+                                            Style="{StaticResource PrimarySolidButton}"
+                                            HorizontalAlignment="Stretch"
+                                            Margin="0,0,0,10"/>
+
+                                    <Button Content="Export report"
+                                            Style="{StaticResource ChromePillButton}"
+                                            HorizontalAlignment="Stretch"
+                                            Margin="0,0,0,10"/>
+
+                                    <Button Content="View detailed analytics"
+                                            Command="{Binding ShowAnalyticsCommand}"
+                                            Style="{StaticResource ChromePillButton}"
+                                            HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- PACKAGE MODERATION -->
+        <ScrollViewer Visibility="{Binding IsPackageModerationSection, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+            </ScrollViewer.Resources>
+            <Grid Margin="24,24,24,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Margin="0,0,0,18"
+                        Padding="20,14"
+                        Background="#FDFEFE"
+                        CornerRadius="18"
+                        BorderBrush="#E8EDF4"
+                        BorderThickness="1"
+                        Effect="{StaticResource MagpieCardFloat}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="Travel Agency"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#64748B"/>
+                            <TextBlock Text="Package moderation"
+                                       FontSize="26"
+                                       FontWeight="Bold"
+                                       Foreground="#0F172A"
+                                       Margin="0,4,0,0"/>
+                            <TextBlock Text="Review packages submitted by agents. Select an item, then approve or reject."
+                                       FontSize="13"
+                                       Foreground="#64748B"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="Back to dashboard"
+                                Command="{Binding ShowDashboardCommand}"
+                                Style="{StaticResource ChromePillButton}"
+                                VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Row="1" Style="{StaticResource StereoSheet}">
+                    <StackPanel>
+                        <TextBlock Text="Pending packages"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0F172A"/>
+
+                        <ListBox ItemsSource="{Binding PendingPackages}"
+                                 SelectedItem="{Binding SelectedPackage}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Margin="0,14,0,0"
+                                 MinHeight="380"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.Resources>
+                                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+                            </ListBox.Resources>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,0,0,12"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="12"
+                                            CornerRadius="14"
+                                            Background="#F9FBFD"
+                                            BorderBrush="#E5E7EB"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="17"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#111827"/>
+
+                                            <TextBlock Text="{Binding Destination, StringFormat=Destination: {0}}"
+                                                       Foreground="#6B7280"
+                                                       Margin="0,6,0,0"/>
+
+                                            <TextBlock Text="{Binding PeriodText, StringFormat=Period: {0}}"
+                                                       Foreground="#6B7280"
+                                                       Margin="0,4,0,0"/>
+
+                                            <TextBlock Text="{Binding CreatedByAgent, StringFormat=Created by: {0}}"
+                                                       Foreground="#6B7280"
+                                                       Margin="0,4,0,0"/>
+
+                                            <TextBlock Text="{Binding Status, StringFormat=Status: {0}}"
+                                                       Foreground="#0D9488"
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,6,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Border Style="{StaticResource CardActionBar}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <Button Content="Approve"
+                                        Command="{Binding ApprovePackageCommand}"
+                                        Style="{StaticResource SuccessPillButton}"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTipService.ToolTip="Approve selected package"/>
+
+                                <Button Content="Reject"
+                                        Command="{Binding RejectPackageCommand}"
+                                        Style="{StaticResource DangerPillButton}"
+                                        HorizontalAlignment="Stretch"
+                                        Margin="0,8,0,0"
+                                        ToolTipService.ToolTip="Reject selected package"/>
+
+                                <Button Content="Refresh list"
+                                        Command="{Binding RefreshDashboardCommand}"
+                                        Style="{StaticResource ChromePillButton}"
+                                        HorizontalAlignment="Stretch"
+                                        Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <ScrollViewer Visibility="{Binding IsAnalyticsSection, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+            </ScrollViewer.Resources>
+            <Grid Margin="24,24,24,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,20" LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Left">
+                        <TextBlock Text="Analytics Reports"
+                                   FontSize="32"
+                                   FontWeight="Bold"
+                                   Foreground="#0F172A"/>
+                        <TextBlock Text="Snapshots and live analytics overview"
+                                   FontSize="16"
+                                   Foreground="#64748B"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="Back to dashboard"
+                            Command="{Binding ShowDashboardCommand}"
+                            Style="{StaticResource ChromePillButton}"
+                            VerticalAlignment="Top"/>
+                </DockPanel>
 
         <Border Grid.Row="1"
-            Background="White"
-            CornerRadius="18"
-            Padding="20">
+                Style="{StaticResource StereoSheet}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,20" LastChildFill="False">
@@ -594,14 +1607,10 @@
                VerticalAlignment="Center"/>
 
                         <Button DockPanel.Dock="Right"
-            Content="Save Snapshot"
-            Command="{Binding SaveAnalyticsSnapshotCommand}"
-            Padding="18,10"
-            MinWidth="150"
-            Background="#2563EB"
-            Foreground="White"
-            BorderBrush="Transparent"
-            FontWeight="SemiBold"/>
+                                Content="Save snapshot"
+                                Command="{Binding SaveAnalyticsSnapshotCommand}"
+                                Style="{StaticResource PrimarySolidButton}"
+                                MinWidth="156"/>
                     </DockPanel>
 
                     <Grid Grid.Row="1">
@@ -619,12 +1628,15 @@
 
                             <!-- SNAPSHOT LIST -->
                             <ListBox ItemsSource="{Binding AnalyticsSnapshots}"
-         SelectedItem="{Binding SelectedSnapshot}"
-         Height="250"
-         BorderThickness="0"
-         Background="Transparent"
-         ScrollViewer.VerticalScrollBarVisibility="Auto"
-         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                     SelectedItem="{Binding SelectedSnapshot}"
+                                     Height="250"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.Resources>
+                                    <Style TargetType="ScrollBar" BasedOn="{StaticResource AdminScrollBarStyle}"/>
+                                </ListBox.Resources>
 
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
@@ -710,17 +1722,14 @@
 
                                             <TextBlock Text="{Binding SelectedSnapshot.TopDestination, StringFormat=Top destination: {0}}"
                                    Margin="0,6,0,0"
-                                   Foreground="#2563EB"
+                                   Foreground="#0D9488"
                                    FontWeight="SemiBold"/>
 
-                                            <Button Content="Restore Snapshot"
-                                Command="{Binding RestoreAnalyticsSnapshotCommand}"
-                                Margin="0,16,0,0"
-                                Padding="12,8"
-                                HorizontalAlignment="Left"
-                                Background="#EFF6FF"
-                                Foreground="#1D4ED8"
-                                BorderBrush="#BFDBFE"/>
+                                            <Button Content="Restore snapshot"
+                                                    Command="{Binding RestoreAnalyticsSnapshotCommand}"
+                                                    Style="{StaticResource InfoPillButton}"
+                                                    Margin="0,16,0,0"
+                                                    HorizontalAlignment="Left"/>
                                         </StackPanel>
                                     </Grid>
 
@@ -848,15 +1857,212 @@
                                         <TextBlock Text="{Binding LiveAnalytics.TopDestination}"
                                FontSize="20"
                                FontWeight="Bold"
-                               Foreground="#2563EB"
+                               Foreground="#0D9488"
                                Margin="0,8,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
                         </Border>
                     </Grid>
+
+                    <!-- Grafic comparativ: snapshot selectat vs date live -->
+                    <Border Grid.Row="2"
+                            Margin="0,22,0,0"
+                            Padding="18,16"
+                            Background="#F8FAFC"
+                            CornerRadius="14"
+                            BorderBrush="#E2E8F0"
+                            BorderThickness="1"
+                            Visibility="{Binding HasSelectedSnapshot, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Comparație vizuală: snapshot vs live"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="#334155"/>
+                            <TextBlock Text="Selectezi un snapshot din listă; barele gri = valori salvate, teal = situația curentă. Scala e separată pentru fiecare metrică."
+                                       FontSize="12"
+                                       Foreground="#64748B"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,14"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Width="14" Height="14" CornerRadius="3" Background="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock Text="Snapshot" Margin="6,0,18,0" VerticalAlignment="Center" FontSize="12" Foreground="#64748B"/>
+                                <Border Width="14" Height="14" CornerRadius="3" Background="#0D9488" VerticalAlignment="Center"/>
+                                <TextBlock Text="Live" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#64748B"/>
+                            </StackPanel>
+
+                            <!-- Bookings -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Rezervări" VerticalAlignment="Bottom" Margin="0,0,8,10" FontWeight="SemiBold" Foreground="#475569"/>
+                                <Border Grid.Column="1" Height="124" Background="#EEF2F7" CornerRadius="8" Padding="16,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#94A3B8" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarBookingsSnapshot}"/>
+                                            </Grid>
+                                            <TextBlock Text="Snapshot" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#0D9488" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarBookingsLive}"/>
+                                            </Grid>
+                                            <TextBlock Text="Live" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Confirmed -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Confirmate" VerticalAlignment="Bottom" Margin="0,0,8,10" FontWeight="SemiBold" Foreground="#15803D"/>
+                                <Border Grid.Column="1" Height="124" Background="#ECFDF5" CornerRadius="8" Padding="16,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#94A3B8" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarConfirmedSnapshot}"/>
+                                            </Grid>
+                                            <TextBlock Text="Snapshot" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#0D9488" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarConfirmedLive}"/>
+                                            </Grid>
+                                            <TextBlock Text="Live" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Rejected -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Respinse" VerticalAlignment="Bottom" Margin="0,0,8,10" FontWeight="SemiBold" Foreground="#DC2626"/>
+                                <Border Grid.Column="1" Height="124" Background="#FEF2F2" CornerRadius="8" Padding="16,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#94A3B8" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarRejectedSnapshot}"/>
+                                            </Grid>
+                                            <TextBlock Text="Snapshot" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#0D9488" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarRejectedLive}"/>
+                                            </Grid>
+                                            <TextBlock Text="Live" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Revenue -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Venit" VerticalAlignment="Bottom" Margin="0,0,8,10" FontWeight="SemiBold" Foreground="#334155"/>
+                                <Border Grid.Column="1" Height="124" Background="#F0FDFA" CornerRadius="8" Padding="16,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#94A3B8" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarRevenueSnapshot}"/>
+                                            </Grid>
+                                            <TextBlock Text="Snapshot" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#0D9488" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarRevenueLive}"/>
+                                            </Grid>
+                                            <TextBlock Text="Live" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Users -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Utilizatori" VerticalAlignment="Bottom" Margin="0,0,8,10" FontWeight="SemiBold" Foreground="#334155"/>
+                                <Border Grid.Column="1" Height="124" Background="#F8FAFC" CornerRadius="8" Padding="16,8" BorderBrush="#E2E8F0" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#94A3B8" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarUsersSnapshot}"/>
+                                            </Grid>
+                                            <TextBlock Text="Snapshot" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                            <Grid Height="120" Width="52">
+                                                <Border Width="40" Background="#0D9488" CornerRadius="6,6,0,0"
+                                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                                        Height="{Binding AnalyticsBarUsersLive}"/>
+                                            </Grid>
+                                            <TextBlock Text="Live" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
         </Border>
+            </Grid>
+        </ScrollViewer>
+            </Grid>
     </Grid>
     </Grid>
 </Window>

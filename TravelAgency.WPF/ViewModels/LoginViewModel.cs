@@ -9,7 +9,7 @@ using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Messaging;
 using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
-using TravelAgency.WPF.Views;
+using TravelAgency.WPF.Services.Navigation;
 using System.Linq;
 
 namespace TravelAgency.WPF.ViewModels
@@ -20,6 +20,7 @@ namespace TravelAgency.WPF.ViewModels
         private readonly IUserRepository _userRepository;
         private readonly Window _loginWindow;
         private readonly IMediator _mediator;
+        private readonly INavigationService _navigation;
         public ICommand OpenRegisterCommand { get; }
         public ICommand OpenForgotPasswordCommand { get; }
 
@@ -47,12 +48,18 @@ namespace TravelAgency.WPF.ViewModels
 
         public ICommand LoginCommand { get; }
 
-        public LoginViewModel(Window loginWindow, IMediator mediator)
+        public LoginViewModel(
+            Window loginWindow,
+            IMediator mediator,
+            IUserRepository userRepository,
+            AuthenticationService authenticationService,
+            INavigationService navigation)
         {
             _loginWindow = loginWindow;
             _mediator = mediator;
-            _userRepository = new EfUserRepository();
-            _authenticationService = new AuthenticationService(new EfUserRepository());
+            _navigation = navigation ?? throw new System.ArgumentNullException(nameof(navigation));
+            _userRepository = userRepository ?? throw new System.ArgumentNullException(nameof(userRepository));
+            _authenticationService = authenticationService ?? throw new System.ArgumentNullException(nameof(authenticationService));
             LoginCommand = new RelayCommand(Login);
             OpenRegisterCommand = new RelayCommand(OpenRegister);
             OpenForgotPasswordCommand = new RelayCommand(OpenForgotPassword);
@@ -98,19 +105,12 @@ namespace TravelAgency.WPF.ViewModels
 
         private void OpenRegister()
         {
-            var registerWindow = new RegisterWindow();
-            registerWindow.Show();
-            _loginWindow.Close();
+            _navigation.ShowRegisterAndClose(_loginWindow);
         }
 
         private void OpenForgotPassword()
         {
-            var forgotWindow = new ForgotPasswordWindow
-            {
-                Owner = _loginWindow,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
-            forgotWindow.ShowDialog();
+            _navigation.ShowForgotPasswordDialog(_loginWindow);
         }
     }
 }

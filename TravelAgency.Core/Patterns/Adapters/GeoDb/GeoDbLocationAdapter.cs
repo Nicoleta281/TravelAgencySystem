@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,75 +14,44 @@ namespace TravelAgency.Core.Patterns.Adapters.GeoDb
 {
     public class GeoDbLocationAdapter : ILocationSearchProvider
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
-        private static readonly SemaphoreSlim _geoDbHttpGate = new SemaphoreSlim(1, 1);
-        private static DateTimeOffset _lastGeoDbRequestUtc = DateTimeOffset.MinValue;
+        private readonly HttpClient _httpClient;
+        private readonly GeoDbOptions _options;
 
-        private readonly string _apiKey;
-        private readonly string _citiesUrl;
-        private readonly string _countriesUrl;
-        private readonly string _host;
+        private readonly SemaphoreSlim _geoDbHttpGate = new SemaphoreSlim(1, 1);
+        private DateTimeOffset _lastGeoDbRequestUtc = DateTimeOffset.MinValue;
 
-        public GeoDbLocationAdapter()
+        public GeoDbLocationAdapter(HttpClient httpClient, GeoDbOptions options)
         {
-            _apiKey = Environment.GetEnvironmentVariable("RAPIDAPI_KEY") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(_apiKey))
-                _apiKey = Environment.GetEnvironmentVariable("RAPIDAPI_KEY", EnvironmentVariableTarget.User) ?? string.Empty;
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
 
-            if (string.IsNullOrWhiteSpace(_apiKey))
-                _apiKey = Environment.GetEnvironmentVariable("RAPIDAPI_KEY", EnvironmentVariableTarget.Machine) ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(_apiKey))
-                throw new InvalidOperationException("Missing environment variable: RAPIDAPI_KEY");
-
-            _citiesUrl = ConfigurationManager.AppSettings["GeoDb.BaseUrl"]
-                ?? "https://wft-geo-db.p.rapidapi.com/v1/geo/cities";
-
-            var root =
-                _citiesUrl.EndsWith("/cities", StringComparison.OrdinalIgnoreCase)
-                    ? _citiesUrl[..^"/cities".Length]
-                    : "https://wft-geo-db.p.rapidapi.com/v1/geo";
-
-            _countriesUrl = ConfigurationManager.AppSettings["GeoDb.CountriesUrl"]
-                ?? $"{root}/countries";
-
-            _host = ConfigurationManager.AppSettings["GeoDb.Host"]
-                ?? "wft-geo-db.p.rapidapi.com";
+            if (string.IsNullOrWhiteSpace(_options.ApiKey))
+                throw new InvalidOperationException("Missing GeoDB (RapidAPI) API key.");
         }
 
-        private static int GetMinRequestIntervalMs()
-        {
-            var raw = ConfigurationManager.AppSettings["GeoDb.MinRequestIntervalMs"];
-            if (int.TryParse(raw, out int ms) && ms is >= 0 and <= 5000)
-                return ms;
-
-            // RapidAPI BASIC plans are often strict on requests/sec; pacing avoids HTTP 429 bursts.
-            return 450;
-        }
-
-        private static async Task<string> SendGeoDbGetAsync(string url, string apiKey, string host)
+        private async Task<string> SendGeoDbGetAsync(string url, CancellationToken cancellationToken)
         {
             const int maxAttempts = 4;
 
-            await _geoDbHttpGate.WaitAsync();
+            await _geoDbHttpGate.WaitAsync(cancellationToken);
             try
             {
                 for (int attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    var minInterval = TimeSpan.FromMilliseconds(GetMinRequestIntervalMs());
+                    var minInterval = TimeSpan.FromMilliseconds(Math.Clamp(_options.MinRequestIntervalMs, 0, 5000));
                     var now = DateTimeOffset.UtcNow;
                     var elapsed = now - _lastGeoDbRequestUtc;
                     if (_lastGeoDbRequestUtc != DateTimeOffset.MinValue && elapsed < minInterval)
                     {
-                        await Task.Delay(minInterval - elapsed);
+                        await Task.Delay(minInterval - elapsed, cancellationToken);
                     }
 
                     using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                    request.Headers.Add("X-RapidAPI-Key", apiKey);
-                    request.Headers.Add("X-RapidAPI-Host", host);
+                    request.Headers.Add("X-RapidAPI-Key", _options.ApiKey);
+                    request.Headers.Add("X-RapidAPI-Host", _options.Host);
 
-                    using var response = await _httpClient.SendAsync(request);
-                    var json = await response.Content.ReadAsStringAsync();
+                    using var response = await _httpClient.SendAsync(request, cancellationToken);
+                    var json = await response.Content.ReadAsStringAsync(cancellationToken);
                     _lastGeoDbRequestUtc = DateTimeOffset.UtcNow;
 
                     if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxAttempts)
@@ -94,7 +62,7 @@ namespace TravelAgency.Core.Patterns.Adapters.GeoDb
 
                         // Small jitter helps when multiple clients hit the same limiter.
                         retryAfterMs += Random.Shared.Next(50, 200);
-                        await Task.Delay(retryAfterMs);
+                        await Task.Delay(retryAfterMs, cancellationToken);
                         continue;
                     }
 
@@ -115,20 +83,20 @@ namespace TravelAgency.Core.Patterns.Adapters.GeoDb
             }
         }
 
-        public async Task<List<LocationOption>> SearchLocationsAsync(string query, int limit = 10)
+        public async Task<List<LocationOption>> SearchLocationsAsync(string query, int limit = 10, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
                 return new List<LocationOption>();
 
             string trimmedQuery = query.Trim();
             string url =
-                $"{_citiesUrl}" +
+                $"{_options.CitiesUrl}" +
                 $"?namePrefix={Uri.EscapeDataString(trimmedQuery)}" +
                 $"&types=CITY" +
                 $"&limit={limit}" +
                 $"&sort=-population";
 
-            var json = await SendGeoDbGetAsync(url, _apiKey, _host);
+            var json = await SendGeoDbGetAsync(url, cancellationToken);
 
             var result = JsonSerializer.Deserialize<GeoDbCitiesResponse>(
                 json,
@@ -182,18 +150,18 @@ namespace TravelAgency.Core.Patterns.Adapters.GeoDb
             return filtered;
         }
 
-        public async Task<List<CountryOption>> SearchCountriesAsync(string query, int limit = 10)
+        public async Task<List<CountryOption>> SearchCountriesAsync(string query, int limit = 10, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
                 return new List<CountryOption>();
 
             string trimmedQuery = query.Trim();
             string url =
-                $"{_countriesUrl}" +
+                $"{_options.CountriesUrl}" +
                 $"?namePrefix={Uri.EscapeDataString(trimmedQuery)}" +
                 $"&limit={limit}";
 
-            var json = await SendGeoDbGetAsync(url, _apiKey, _host);
+            var json = await SendGeoDbGetAsync(url, cancellationToken);
 
             var result = JsonSerializer.Deserialize<GeoDbCountriesResponse>(
                 json,
@@ -219,20 +187,20 @@ namespace TravelAgency.Core.Patterns.Adapters.GeoDb
                 .ToList();
         }
 
-        public async Task<List<LocationOption>> GetCitiesByCountryCodeAsync(string countryCode, int limit = 20)
+        public async Task<List<LocationOption>> GetCitiesByCountryCodeAsync(string countryCode, int limit = 20, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(countryCode))
                 return new List<LocationOption>();
 
             string code = countryCode.Trim();
             string url =
-                $"{_citiesUrl}" +
+                $"{_options.CitiesUrl}" +
                 $"?countryIds={Uri.EscapeDataString(code)}" +
                 $"&types=CITY" +
                 $"&limit={limit}" +
                 $"&sort=-population";
 
-            var json = await SendGeoDbGetAsync(url, _apiKey, _host);
+            var json = await SendGeoDbGetAsync(url, cancellationToken);
 
             var result = JsonSerializer.Deserialize<GeoDbCitiesResponse>(
                 json,
