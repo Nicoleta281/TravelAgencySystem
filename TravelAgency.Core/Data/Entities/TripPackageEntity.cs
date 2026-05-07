@@ -19,6 +19,7 @@ namespace TravelAgency.Core.Data.Entities
         public string ShortDescription { get; set; } = "";
         public string PricingNotes { get; set; } = "";
         public double BasePrice { get; set; }
+        public string? CoverImageUrl { get; set; }
 
         // Season
         public string SeasonName { get; set; } = "";

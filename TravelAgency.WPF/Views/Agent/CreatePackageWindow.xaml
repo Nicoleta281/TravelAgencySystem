@@ -154,8 +154,19 @@
                                 <Grid>
                                     <Border x:Name="PreviewImageOverlay"
                                             Background="#DCEBFA"
-                                            Opacity="0.85"
+                                            Opacity="1"
                                             CornerRadius="14"/>
+                                    <!-- Subtle dark overlay for readability when an image is set -->
+                                    <Border x:Name="PreviewImageDimmer"
+                                            CornerRadius="14"
+                                            Opacity="0">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="#00000000" Offset="0"/>
+                                                <GradientStop Color="#7F0F172A" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                    </Border>
                                     <TextBlock x:Name="PreviewDestinationCodeText"
                            Text="PARIS"
                            FontSize="30"
@@ -165,6 +176,17 @@
                            VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
+
+                            <!-- Destination image thumbnails (from API) -->
+                            <ItemsControl x:Name="DestinationImagesStrip"
+                                          Margin="0,10,0,0"
+                                          Visibility="Collapsed">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
                             <TextBlock x:Name="PreviewPackageNameText"
                    Text="Paris Getaway"
@@ -445,7 +467,21 @@
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border Padding="10" Margin="0,0,0,8" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8">
-                                                        <StackPanel>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="68"/>
+                                                                <ColumnDefinition Width="10"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <Border Grid.Column="0"
+                                                                    CornerRadius="10"
+                                                                    Background="#EEF2FF">
+                                                                <Image Stretch="UniformToFill"
+                                                                       Source="{Binding ThumbnailUrl}"/>
+                                                            </Border>
+
+                                                            <StackPanel Grid.Column="2">
                                                             <TextBlock Text="{Binding Name}"
                                    FontWeight="Bold"
                                    FontSize="14"
@@ -463,7 +499,8 @@
 
                                                             <TextBlock Foreground="#6B7280"
                                    Text="{Binding HotelClass, StringFormat=Class: {0}}"/>
-                                                        </StackPanel>
+                                                            </StackPanel>
+                                                        </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
@@ -888,13 +925,15 @@
                         <ColumnDefinition Width="130"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="1"
+                    <Button x:Name="SaveDraftButton"
+                            Grid.Column="1"
                             Content="Save Draft"
                             Height="42"
                             Background="#F3F4F6"
                             Foreground="#1F2937"
                             BorderBrush="#D1D5DB"
-                            FontWeight="SemiBold"/>
+                            FontWeight="SemiBold"
+                            Click="SaveDraftButton_Click"/>
 
                     <Button x:Name="BackButton"
         Grid.Column="3"
@@ -917,6 +956,40 @@
         FontWeight="SemiBold"
         Click="NextButton_Click"/>
                 </Grid>
+
+                <!-- Toast (non-blocking feedback) -->
+                <Border x:Name="ToastHost"
+                        Grid.RowSpan="4"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,8"
+                        CornerRadius="14"
+                        Background="#0F172A"
+                        Opacity="0"
+                        Padding="14,10"
+                        Panel.ZIndex="50"
+                        IsHitTestVisible="False"
+                        RenderTransformOrigin="0.5,0.5">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="ToastTranslate" Y="16"/>
+                    </Border.RenderTransform>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="ToastIcon"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   Text="&#xE73E;"
+                                   Foreground="#FFFFFF"
+                                   Margin="0,0,10,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ToastText"
+                                   Foreground="#FFFFFF"
+                                   FontSize="13.5"
+                                   FontWeight="SemiBold"
+                                   Text="Saved."
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="720"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
     </Grid>

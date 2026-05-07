@@ -198,6 +198,9 @@ namespace TravelAgency.Core.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("CoverImageUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("DepartureCity")
                         .IsRequired()
                         .HasColumnType("text");

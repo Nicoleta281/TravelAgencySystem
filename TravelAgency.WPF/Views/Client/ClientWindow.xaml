@@ -391,10 +391,10 @@
                                            Foreground="#374151"
                                            Text="{Binding BookingDate, StringFormat=Booked on: {0:dd MMM yyyy HH:mm}}"/>
 
-                                                <TextBlock Text="{Binding Status.Name}"
-           FontSize="16"
-           Foreground="#666"
-           Margin="0,4,0,0"/>
+                                                <TextBlock FontSize="16"
+                                                           Foreground="#374151"
+                                                           Margin="0,4,0,0"
+                                                           Text="{Binding Status.Name, Converter={StaticResource BookingStatusRoConverter}}"/>
 
                                                 <TextBlock Margin="0,4,0,0"
                                            FontSize="14"

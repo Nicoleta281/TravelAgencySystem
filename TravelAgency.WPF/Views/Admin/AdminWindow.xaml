@@ -1249,7 +1249,9 @@
                                                     ElementStyle="{StaticResource AdminDataGridTextElement}"/>
                                 <DataGridTextColumn Header="Package" Width="1.2*" Binding="{Binding TripPackage.Name}"
                                                     ElementStyle="{StaticResource AdminDataGridTextElement}"/>
-                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusName}"
+                                <DataGridTextColumn Header="Stare"
+                                                    Width="110"
+                                                    Binding="{Binding StatusName, Converter={StaticResource BookingStatusRoConverter}}"
                                                     ElementStyle="{StaticResource AdminDataGridTextElement}"/>
                                 <DataGridTextColumn Header="Total" Width="100"
                                                     Binding="{Binding TotalPrice, StringFormat=F2}"

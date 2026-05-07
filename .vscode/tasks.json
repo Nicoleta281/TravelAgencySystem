@@ -14,6 +14,35 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "run-api-http",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/TravelAgency.Api/TravelAgency.Api.csproj",
+                "--launch-profile",
+                "http",
+                "--no-build"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "kind": "file",
+                "pattern": [
+                    {
+                        "regexp": "^(.*)$",
+                        "file": 1,
+                        "message": 1
+                    }
+                ],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "Now listening on:",
+                    "endsPattern": "Now listening on: http://localhost:5280"
+                }
+            }
+        },
+        {
             "label": "publish",
             "command": "dotnet",
             "type": "process",

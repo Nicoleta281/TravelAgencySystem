@@ -21,6 +21,7 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public string ShortDescription { get; set; } = "";
         public string PricingNotes { get; set; } = "";
         public double BasePrice { get; set; }
+        public string? CoverImageUrl { get; set; }
 
         // Flyweight
         public PackageSharedInfo? SharedInfo { get; set; }

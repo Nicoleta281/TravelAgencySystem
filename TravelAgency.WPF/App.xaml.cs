@@ -1,8 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuestPDF.Infrastructure;
+using System;
+using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models.Users;
@@ -27,10 +33,35 @@ namespace TravelAgency.WPF
     {
         public static IServiceProvider Services { get; private set; } = null!;
         public static IMediator Mediator { get; private set; } = null!;
+        private System.Diagnostics.Process? _apiProcess;
+        private bool _apiStartedByThisApp;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Catch unhandled exceptions so the UI doesn't silently close.
+            // This also makes debugging much easier for runtime XAML/binding/storyboard issues.
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+            // Reduce noisy binding warnings in Output window (they are usually harmless and extremely spammy).
+            // We still show real exceptions via the handlers above.
+            try
+            {
+                PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
+            }
+            catch
+            {
+                // ignore
+            }
+
+#if DEBUG
+            // In development we can prevent "port already in use" by spawning/stopping the API together with the WPF app.
+            // If the API is already running, we won't start another instance.
+            TryStartApiForDev();
+#endif
 
             Services = ConfigureServices();
             Mediator = Services.GetRequiredService<IMediator>();
@@ -53,6 +84,147 @@ namespace TravelAgency.WPF
             MainWindow = startWindow;
             startWindow.Show();
         }
+
+        private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                Debug.WriteLine("DispatcherUnhandledException: " + e.Exception);
+                MessageBox.Show(
+                    e.Exception.ToString(),
+                    "Unhandled UI exception",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch
+            {
+                // ignored
+            }
+            finally
+            {
+                // Prevent immediate shutdown so user can continue.
+                e.Handled = true;
+            }
+        }
+
+        private static void OnDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                Debug.WriteLine("DomainUnhandledException: " + (e.ExceptionObject?.ToString() ?? "<null>"));
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            try
+            {
+                Debug.WriteLine("UnobservedTaskException: " + e.Exception);
+            }
+            catch
+            {
+                // ignored
+            }
+            finally
+            {
+                e.SetObserved();
+            }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+#if DEBUG
+            if (_apiStartedByThisApp && _apiProcess != null && !_apiProcess.HasExited)
+            {
+                try
+                {
+                    _apiProcess.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // Best-effort shutdown. In the worst case the next run can still detect the port and skip starting.
+                }
+            }
+#endif
+            base.OnExit(e);
+        }
+
+#if DEBUG
+        private void TryStartApiForDev()
+        {
+            // Keep aligned with WPF image proxy / media calls (http://localhost:5280)
+            const int apiPort = 5280;
+            if (IsPortListening(apiPort))
+                return;
+
+            try
+            {
+                var apiCsproj = GetRepoRoot() + Path.DirectorySeparatorChar + "TravelAgency.Api" + Path.DirectorySeparatorChar + "TravelAgency.Api.csproj";
+
+                // Uses launchSettings.json profile named "http" => http://localhost:5280
+                var startInfo = new System.Diagnostics.ProcessStartInfo(
+                    "dotnet",
+                    $"run --project \"{apiCsproj}\" --launch-profile http --no-build")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                _apiProcess = System.Diagnostics.Process.Start(startInfo);
+                if (_apiProcess == null)
+                    return;
+
+                _apiStartedByThisApp = true;
+
+                // Wait until the port is reachable (avoid race condition when user immediately clicks "Forgot password").
+                WaitForPortListening(apiPort, TimeSpan.FromSeconds(30));
+            }
+            catch
+            {
+                _apiProcess = null;
+                _apiStartedByThisApp = false;
+            }
+        }
+
+        private static bool IsPortListening(int port)
+        {
+            try
+            {
+                using var client = new TcpClient();
+                var connectTask = client.ConnectAsync("localhost", port);
+                return connectTask.Wait(TimeSpan.FromMilliseconds(500)) && client.Connected;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void WaitForPortListening(int port, TimeSpan timeout)
+        {
+            var start = DateTime.UtcNow;
+            while (DateTime.UtcNow - start < timeout)
+            {
+                if (IsPortListening(port))
+                    return;
+
+                System.Threading.Thread.Sleep(250);
+            }
+        }
+
+        private static string GetRepoRoot()
+        {
+            // base directory: .../TravelAgency.WPF/bin/Debug/net8.0-windows/
+            // go up 4 levels to .../TravelAgencySystem/
+            var baseDir = AppContext.BaseDirectory;
+            var repoRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", ".."));
+            return repoRoot;
+        }
+#endif
 
         private static IServiceProvider ConfigureServices()
         {

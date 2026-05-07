@@ -17,6 +17,7 @@ namespace TravelAgency.Core.Models
         // Step 2
         public string Destination { get; set; } = "";
         public string Country { get; set; } = "";
+        public string? CoverImageUrl { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public int NumberOfDays { get; set; }

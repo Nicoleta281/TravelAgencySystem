@@ -44,6 +44,14 @@ namespace TravelAgency.Core.Services
             if (trip == null)
                 throw new InvalidOperationException("Trip package no longer exists.");
 
+            // Draft packages are not bookable until finalized by an agent.
+            if (!string.IsNullOrWhiteSpace(trip.PricingNotes) &&
+                trip.PricingNotes.Trim().Equals("DRAFT", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Acest pachet este încă în draft și nu poate fi rezervat. Te rugăm să alegi alt pachet.");
+            }
+
             // Capacity rule (Variant 1): Pending + Confirmed consume capacity.
             var occupied = _bookingRepository.CountByTripPackageIdAndStatuses(tripPackageId, "Pending", "Confirmed");
             if (occupied >= trip.AvailableSeats)

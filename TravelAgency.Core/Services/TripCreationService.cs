@@ -50,6 +50,10 @@ namespace TravelAgency.Core.Services
             if (request.FinalPrice > 0)
                 trip.Price = request.FinalPrice;
 
+            trip.CoverImageUrl = string.IsNullOrWhiteSpace(request.CoverImageUrl)
+                ? null
+                : request.CoverImageUrl.Trim();
+
             // componente create prin Abstract Factory
             trip.Transport = transport;
             trip.Stay = stay;

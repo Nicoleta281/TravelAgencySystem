@@ -9,11 +9,22 @@ using TravelAgency.Core.Services.Sms;
 using System.Security.Cryptography;
 using System.Text;
 using System.Net;
+using Microsoft.Extensions.Caching.Memory;
+using TravelAgency.Api.Services;
+using TravelAgency.Core.Patterns.Adapters.SerpApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContextFactory<TravelAgencyDbContext>(options =>
     options.UseNpgsql(BuildConnectionString(builder.Configuration)));
+
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
+
+// Destination media
+builder.Services.AddSingleton<DestinationImagesService>();
+
+builder.Services.AddSingleton<DestinationHotelsService>();
 
 var smtp = builder.Configuration.GetSection("Smtp");
 builder.Services.AddSingleton<IEmailSender>(_ =>
@@ -56,6 +67,201 @@ app.MapPost("/api/password-reset/request", RequestPasswordResetAsync);
 app.MapPost("/api/password-reset/confirm", ConfirmPasswordResetAsync);
 app.MapGet("/reset-password", ResetPasswordPage);
 app.MapPost("/reset-password", ResetPasswordSubmit);
+
+// Destination images (Wikipedia/Wikimedia) with disk cache
+app.MapGet("/api/destinations/images", async (
+    string city,
+    string? country,
+    int? limit,
+    int? seed,
+    DestinationImagesService svc,
+    CancellationToken ct) =>
+{
+    var result = await svc.GetImagesAsync(city, country, limit ?? 8, seed, ct);
+    return Results.Ok(result);
+});
+
+app.MapGet("/api/destinations/hotels", async (
+    string city,
+    string? country,
+    DateTime checkIn,
+    DateTime checkOut,
+    int? adults,
+    int? limit,
+    DestinationHotelsService svc,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await svc.GetHotelsAsync(
+            city,
+            country,
+            checkIn,
+            checkOut,
+            adults ?? 2,
+            limit ?? 10,
+            ct);
+        return Results.Ok(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// Simple image proxy to avoid hotlink/CORS/tls issues in WPF when loading 3rd-party images.
+// Includes in-memory caching to avoid re-downloading the same image repeatedly.
+app.MapGet("/api/images/proxy", async (
+    string url,
+    IHttpClientFactory httpFactory,
+    IMemoryCache cache,
+    CancellationToken ct) =>
+{
+    if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+        (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+    {
+        return Results.BadRequest(new { error = "Invalid url" });
+    }
+
+    var cacheKey = "imgproxy:v2:" + uri.AbsoluteUri;
+    if (cache.TryGetValue(cacheKey, out object? cachedObj) &&
+        cachedObj is ValueTuple<byte[], string> cached &&
+        cached.Item1.Length > 0)
+    {
+        return Results.File(cached.Item1, cached.Item2);
+    }
+
+    var http = httpFactory.CreateClient();
+    http.Timeout = TimeSpan.FromSeconds(60);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("TravelAgencySystem/1.0 (image-proxy)");
+
+    static Uri NormalizeUnsplashForJpg(Uri u)
+    {
+        try
+        {
+            var s = u.ToString();
+            s = s.Replace("auto=format", "auto=compress", StringComparison.OrdinalIgnoreCase);
+            if (s.Contains("fm=webp", StringComparison.OrdinalIgnoreCase))
+                s = s.Replace("fm=webp", "fm=jpg", StringComparison.OrdinalIgnoreCase);
+            if (s.Contains("fm=avif", StringComparison.OrdinalIgnoreCase))
+                s = s.Replace("fm=avif", "fm=jpg", StringComparison.OrdinalIgnoreCase);
+            if (!s.Contains("fm=", StringComparison.OrdinalIgnoreCase))
+                s += (s.Contains('?', StringComparison.Ordinal) ? "&" : "?") + "fm=jpg";
+            return new Uri(s, UriKind.Absolute);
+        }
+        catch
+        {
+            return u;
+        }
+    }
+
+    // Prefer WPF-decodable formats (avoid webp/avif). If a CDN ignores Accept,
+    // we normalize Unsplash URLs and retry once.
+    Uri requestUri = uri;
+
+    static bool LooksLikeWebP(byte[] b)
+        => b.Length >= 12 &&
+           b[0] == (byte)'R' && b[1] == (byte)'I' && b[2] == (byte)'F' && b[3] == (byte)'F' &&
+           b[8] == (byte)'W' && b[9] == (byte)'E' && b[10] == (byte)'B' && b[11] == (byte)'P';
+
+    static bool LooksLikeAvif(byte[] b)
+    {
+        // Very small sniff: look for "ftypavif" within first ~64 bytes (common in AVIF/HEIF files).
+        var max = Math.Min(b.Length, 64);
+        for (var i = 0; i + 7 < max; i++)
+        {
+            if (b[i] == (byte)'f' && b[i + 1] == (byte)'t' && b[i + 2] == (byte)'y' && b[i + 3] == (byte)'p' &&
+                b[i + 4] == (byte)'a' && b[i + 5] == (byte)'v' && b[i + 6] == (byte)'i' && b[i + 7] == (byte)'f')
+                return true;
+        }
+        return false;
+    }
+
+    // Retry for 429 + one retry for "unsupported image format".
+    for (var attempt = 0; attempt < 3; attempt++)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        req.Headers.TryAddWithoutValidation("Accept", "image/jpeg,image/png,image/*;q=0.8,*/*;q=0.5");
+        using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+
+        if ((int)resp.StatusCode == 429 && attempt == 0)
+        {
+            var delay = resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(2);
+            if (delay > TimeSpan.FromSeconds(6)) delay = TimeSpan.FromSeconds(6);
+            await Task.Delay(delay, ct);
+            continue;
+        }
+
+        if (!resp.IsSuccessStatusCode)
+            return Results.StatusCode((int)resp.StatusCode);
+
+        // Important: buffer into memory so the response can be disposed safely.
+        // WPF loads images by reading the full response body anyway.
+        var contentType = resp.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+        var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+
+        // If we got an unsupported format (webp/avif), try once more with an Unsplash jpg-normalized URL.
+        var ctLower = contentType.ToLowerInvariant();
+        var isUnsupported =
+            ctLower.Contains("image/webp") ||
+            ctLower.Contains("image/avif") ||
+            LooksLikeWebP(bytes) ||
+            LooksLikeAvif(bytes);
+
+        if (isUnsupported &&
+            requestUri.Host.EndsWith("unsplash.com", StringComparison.OrdinalIgnoreCase) &&
+            attempt < 2)
+        {
+            requestUri = NormalizeUnsplashForJpg(requestUri);
+            continue;
+        }
+
+        // If it's still unsupported after retry, fail explicitly (client will keep its placeholder/fallback).
+        if (isUnsupported)
+            return Results.StatusCode(415);
+        if (bytes.Length > 0)
+        {
+            cache.Set(
+                cacheKey,
+                (bytes, contentType),
+                new MemoryCacheEntryOptions
+                {
+                    SlidingExpiration = TimeSpan.FromHours(2)
+                });
+        }
+        return Results.File(bytes, contentType);
+    }
+
+    return Results.StatusCode(429);
+});
+
+// Debug helper: verify env/config keys are visible to API process (does NOT return the key).
+app.MapGet("/api/debug/keys", (IConfiguration config) =>
+{
+    var envUnsplash = Environment.GetEnvironmentVariable("UNSPLASH_ACCESS_KEY") ?? "";
+    var cfgUnsplash = config["Unsplash:AccessKey"] ?? "";
+
+    var envSerp = Environment.GetEnvironmentVariable("SERPAPI_API_KEY") ?? "";
+    var cfgSerp = config["SerpApi:ApiKey"] ?? "";
+
+    return Results.Ok(new
+    {
+        unsplash = new
+        {
+            envPresent = !string.IsNullOrWhiteSpace(envUnsplash),
+            envLength = envUnsplash.Length,
+            configPresent = !string.IsNullOrWhiteSpace(cfgUnsplash),
+            configLength = cfgUnsplash.Length
+        },
+        serpApi = new
+        {
+            envPresent = !string.IsNullOrWhiteSpace(envSerp),
+            envLength = envSerp.Length,
+            configPresent = !string.IsNullOrWhiteSpace(cfgSerp),
+            configLength = cfgSerp.Length
+        }
+    });
+});
 
 app.Run();
 

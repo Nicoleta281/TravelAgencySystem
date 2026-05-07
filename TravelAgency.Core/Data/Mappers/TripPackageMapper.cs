@@ -30,6 +30,7 @@ namespace TravelAgency.Core.Data.Mappers
                 ShortDescription = trip.ShortDescription ?? "",
                 PricingNotes = trip.PricingNotes ?? "",
                 BasePrice = trip.BasePrice,
+                CoverImageUrl = trip.CoverImageUrl,
 
                 SeasonName = season.Name,
                 SeasonStartDate = DateTime.SpecifyKind(season.StartDate, DateTimeKind.Utc),
@@ -82,6 +83,7 @@ namespace TravelAgency.Core.Data.Mappers
                 ShortDescription = e.ShortDescription ?? "",
                 PricingNotes = e.PricingNotes ?? "",
                 BasePrice = e.BasePrice,
+                CoverImageUrl = e.CoverImageUrl,
 
                 TransportDisplayName = e.TransportType ?? "",
                 StayDisplayName = e.StayType ?? "",

@@ -75,6 +75,7 @@ namespace TravelAgency.Core.Data.Repositories
             entity.AccommodationName = mapped.AccommodationName;
             entity.MealPlan = mapped.MealPlan;
             entity.AvailableSeats = mapped.AvailableSeats;
+            entity.CoverImageUrl = mapped.CoverImageUrl;
 
             entity.DiscountPercent = mapped.DiscountPercent;
             entity.VatPercent = mapped.VatPercent;

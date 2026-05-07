@@ -1,6 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -19,6 +24,14 @@ using TravelAgency.WPF.Services.Navigation;
 
 namespace TravelAgency.WPF.ViewModels.AgentVM
 {
+    public class AgentNotificationItem
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+        public string AccentColor { get; set; } = "#6366F1";
+    }
+
     public class AgentViewModel : ViewModelBase, IBookingObserver
     {
         private readonly BookingNotificationService _notificationService;
@@ -38,6 +51,38 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ObservableCollection<Booking> PendingBookings { get; set; }
         public ObservableCollection<Booking> AllBookings { get; } = new();
         public ObservableCollection<Booking> ReportPreviewBookings { get; } = new();
+
+        // Dashboard data
+        public ObservableCollection<Booking> RecentBookings { get; } = new();
+        public ObservableCollection<TravelAgency.Core.Models.Users.User> RecentClients { get; } = new();
+        public ObservableCollection<AgentNotificationItem> Notifications { get; } = new();
+
+        // Dashboard "Recent bookings" table (tab-filtered)
+        public ObservableCollection<Booking> DashboardBookings { get; } = new();
+
+        private string _dashboardBookingFilter = "All";
+        public string DashboardBookingFilter
+        {
+            get => _dashboardBookingFilter;
+            set
+            {
+                if (Set(ref _dashboardBookingFilter, value))
+                    RefreshDashboardBookings();
+            }
+        }
+
+        public ICommand SetDashboardBookingFilterCommand { get; }
+
+        private string _clientSearchText = "";
+        public string ClientSearchText
+        {
+            get => _clientSearchText;
+            set
+            {
+                if (Set(ref _clientSearchText, value))
+                    LoadRecentClients();
+            }
+        }
 
         public ObservableCollection<string> ReportTypes { get; } = new()
 {
@@ -80,7 +125,12 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             set => Set(ref _selectedExportFormat, value);
         }
 
-        public ICollectionView TripsView { get; }
+        public ICollectionView TripsView
+        {
+            get => _tripsView;
+            private set => Set(ref _tripsView, value);
+        }
+        private ICollectionView _tripsView = null!;
         public int TotalPackagesCount => Trips.Count;
 
         public int ActiveOffersCount => Trips.Count;
@@ -173,6 +223,14 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand ShowConfirmedBookingsCommand { get; }
         public ICommand ShowDashboardCommand { get; }
         public ICommand ShowRejectedBookingsCommand { get; }
+        public ICommand ShowClientsCommand { get; }
+
+        private string _navSection = "Dashboard";
+        public string NavSection
+        {
+            get => _navSection;
+            set => Set(ref _navSection, value);
+        }
 
 
         public AgentViewModel(
@@ -195,8 +253,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             _bookingApprovalChain = (approvalChainFactory ?? throw new ArgumentNullException(nameof(approvalChainFactory))).Create();
             _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
 
-            TripsView = CollectionViewSource.GetDefaultView(Trips);
-            TripsView.Filter = FilterTrips;
+            RecreateTripsView();
 
             CreateQuickCommand = new RelayCommand(CreateQuick);
             CreateCustomCommand = new RelayCommand(CreateCustom);
@@ -209,11 +266,18 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             ShowBookingsCommand = new RelayCommand(ShowBookings);
             GenerateReportCommand = new RelayCommand(GenerateReport);
             LogoutCommand = new RelayCommand(Logout);
+            ShowClientsCommand = new RelayCommand(ShowClients);
 
             IsDashboardVisible = true;
             IsPackagesVisible = false;
             IsBookingsVisible = false;
             IsReportsVisible = false;
+            IsClientsVisible = false;
+
+            DashboardVisibility = Visibility.Visible;
+            PackagesVisibility = Visibility.Collapsed;
+            ReportsVisibility = Visibility.Collapsed;
+            ClientsVisibility = Visibility.Collapsed;
 
             Trips.CollectionChanged += (_, __) => RefreshStats();
 
@@ -236,27 +300,454 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             ShowAllBookingsCommand = new RelayCommand(LoadAllBookings);
             ShowPendingBookingsCommand = new RelayCommand(LoadPendingBookings);
             ShowConfirmedBookingsCommand = new RelayCommand(LoadConfirmedBookings);
-            ShowDashboardCommand = new RelayCommand(ShowPackages);
+            ShowDashboardCommand = new RelayCommand(ShowDashboard);
             ShowRejectedBookingsCommand = new RelayCommand(LoadRejectedBookings);
+            SetDashboardBookingFilterCommand = new RelayCommand<string>(filter =>
+                DashboardBookingFilter = string.IsNullOrWhiteSpace(filter) ? "All" : filter);
+
+            NavSection = "Dashboard";
 
             LoadPendingRequests();
             LoadTrips();
             LoadReportBookings();
             LoadAllBookings();
+
+            LoadRecentClients();
+            RefreshRecentBookings();
+            RefreshDashboardBookings();
         }
         private void LoadTrips()
         {
-            Trips.Clear();
+            try
+            {
+                Trips.Clear();
 
-            foreach (var t in _repo.GetAll())
-                Trips.Add(t);
+                foreach (var t in _repo.GetAll())
+                    Trips.Add(t);
 
-            
-            if (Trips.Count > 0 && SelectedTrip == null)
-                SelectedTrip = Trips[0];
-            RefreshStats();
-            TripsView.Refresh();
-            Status = $"Loaded {Trips.Count} trips from database.";
+                if (Trips.Count > 0 && SelectedTrip == null)
+                    SelectedTrip = Trips[0];
+
+                RefreshStats();
+                RecreateTripsView();
+                var withCover = Trips.Count(t => !string.IsNullOrWhiteSpace(t.CoverImageUrl));
+                Status = $"Loaded {Trips.Count} trips from database. Covers: {withCover}/{Trips.Count}.";
+
+                // Only hydrate covers if some are missing/invalid.
+                // Never overwrite user-selected covers just to create "variety".
+                if (Trips.Any(t => string.IsNullOrWhiteSpace(t.CoverImageUrl) || IsProbablyUnsupportedCoverUrlStatic(t.CoverImageUrl)))
+                    _ = HydrateMissingCoverImagesAsync();
+
+                // If API is still starting, first image render may fall back to defaults.
+                // Force a refresh once the API becomes reachable so images appear without user filtering.
+                _ = RefreshTripsViewOnceApiReadyAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("LoadTrips failed: " + ex);
+                Status = "LoadTrips failed: " + ex.Message;
+            }
+        }
+
+        private void RecreateTripsView()
+        {
+            var view = CollectionViewSource.GetDefaultView(Trips);
+            view.Filter = FilterTrips;
+            TripsView = view;
+        }
+
+        private const string ApiBaseUrl = "http://localhost:5280";
+        private static readonly HttpClient _coverHttp = new() { Timeout = TimeSpan.FromSeconds(10) };
+
+        private async Task RefreshTripsViewOnceApiReadyAsync()
+        {
+            try
+            {
+                // Give layout a moment and let the API bootstrap if WPF started it.
+                await Task.Delay(500);
+
+                // Wait up to ~6s for API to be reachable.
+                for (var i = 0; i < 12; i++)
+                {
+                    try
+                    {
+                        using var resp = await _coverHttp.GetAsync($"{ApiBaseUrl}/api/debug/keys");
+                        if (resp.IsSuccessStatusCode)
+                            break;
+                    }
+                    catch
+                    {
+                        // ignore and retry
+                    }
+
+                    await Task.Delay(500);
+                }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        // Rebind the view; avoids the buggy Remove/Insert loop that can skip items.
+                        RecreateTripsView();
+                        TripsView.Refresh();
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                });
+
+                // Some ImageSource converters (network/proxy loads) need a second refresh after the API
+                // is fully warmed up, otherwise banners can stay blank until the user types in Search.
+                await Task.Delay(800);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        TripsView.Refresh();
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("RefreshTripsViewOnceApiReadyAsync failed: " + ex);
+            }
+        }
+
+        private async Task HydrateMissingCoverImagesAsync()
+        {
+            try
+            {
+                // Small concurrency limit so we don't spam the API/Unsplash.
+                using var gate = new SemaphoreSlim(3, 3);
+
+                var snapshot = Trips.ToList();
+
+                static bool IsProbablyUnsupportedCoverUrl(string? url)
+                {
+                    if (string.IsNullOrWhiteSpace(url))
+                        return false;
+
+                    try
+                    {
+                        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+                            return false;
+
+                        // We no longer use Wikimedia/Wikipedia as an image source.
+                        // Existing rows may still have old covers pointing there; rehydrate them to Unsplash.
+                        var host = (uri.Host ?? "").ToLowerInvariant();
+                        if (host.Contains("wikimedia.org") || host.Contains("wikipedia.org"))
+                            return true;
+
+                        // Unsplash-only: any other remote host is considered invalid for covers.
+                        // (Other sources often return webp/avif and break WPF decoding.)
+                        if (!host.EndsWith("unsplash.com"))
+                            return true;
+
+                        // Common CDN patterns: ?fm=webp / ?format=webp / ?auto=format (often yields webp/avif)
+                        var q = (uri.Query ?? "").ToLowerInvariant();
+                        if (q.Contains("fm=webp") || q.Contains("fm=avif") || q.Contains("format=webp") || q.Contains("format=avif"))
+                            return true;
+                        if (q.Contains("auto=format"))
+                            return true;
+
+                        var path = uri.AbsolutePath ?? "";
+                        var ext = Path.GetExtension(path);
+                        if (string.IsNullOrWhiteSpace(ext))
+                            return false;
+
+                        ext = ext.Trim().ToLowerInvariant();
+                        return ext is ".webp" or ".avif" or ".svg";
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
+
+                static bool IsSupportedCandidateUrl(string? url)
+                {
+                    if (string.IsNullOrWhiteSpace(url))
+                        return false;
+
+                    try
+                    {
+                        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+                            return false;
+
+                        var q = (uri.Query ?? "").ToLowerInvariant();
+                        if (q.Contains("fm=webp") || q.Contains("fm=avif") || q.Contains("format=webp") || q.Contains("format=avif"))
+                            return false;
+                        if (q.Contains("auto=format"))
+                            return false; // may negotiate webp/avif; we'll pick normalized URLs instead
+
+                        var path = uri.AbsolutePath ?? "";
+                        var ext = Path.GetExtension(path);
+                        if (string.IsNullOrWhiteSpace(ext))
+                            return true; // Unknown extension; allow (Unsplash/Wiki sometimes serve without)
+
+                        ext = ext.Trim().ToLowerInvariant();
+                        return ext is ".jpg" or ".jpeg" or ".png";
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
+
+                static string NormalizeCoverUrlForWpf(string url)
+                {
+                    try
+                    {
+                        var s = (url ?? "").Trim();
+                        if (s.Length == 0)
+                            return s;
+
+                        if (!Uri.TryCreate(s, UriKind.Absolute, out var uri))
+                            return s;
+
+                        if (uri.Host.EndsWith("unsplash.com", StringComparison.OrdinalIgnoreCase))
+                        {
+                            s = s.Replace("auto=format", "auto=compress", StringComparison.OrdinalIgnoreCase);
+                            if (s.Contains("fm=webp", StringComparison.OrdinalIgnoreCase))
+                                s = s.Replace("fm=webp", "fm=jpg", StringComparison.OrdinalIgnoreCase);
+                            if (s.Contains("fm=avif", StringComparison.OrdinalIgnoreCase))
+                                s = s.Replace("fm=avif", "fm=jpg", StringComparison.OrdinalIgnoreCase);
+                            if (!s.Contains("fm=", StringComparison.OrdinalIgnoreCase))
+                                s += (s.Contains('?', StringComparison.Ordinal) ? "&" : "?") + "fm=jpg";
+                        }
+
+                        return s;
+                    }
+                    catch
+                    {
+                        return (url ?? "").Trim();
+                    }
+                }
+
+                // If a cover is already an Unsplash URL but in an unsafe format (auto=format/webp),
+                // normalize it in-place (same image) instead of fetching a different one.
+                static bool TryNormalizeExistingCoverInPlace(TripPackage trip, out string normalized)
+                {
+                    normalized = "";
+                    var current = (trip.CoverImageUrl ?? "").Trim();
+                    if (current.Length == 0)
+                        return false;
+
+                    var norm = NormalizeCoverUrlForWpf(current);
+                    if (string.Equals(current, norm, StringComparison.Ordinal))
+                        return false;
+
+                    normalized = norm;
+                    return normalized.Length > 0;
+                }
+
+                var tasks = snapshot
+                    .Where(t =>
+                        t != null &&
+                        (string.IsNullOrWhiteSpace(t.CoverImageUrl) ||
+                         IsProbablyUnsupportedCoverUrl(t.CoverImageUrl)) &&
+                        (!string.IsNullOrWhiteSpace(t.Destination) || !string.IsNullOrWhiteSpace(t.Name)))
+                    .Select(async trip =>
+                    {
+                        await gate.WaitAsync();
+                        try
+                        {
+                            if (TryNormalizeExistingCoverInPlace(trip, out var normalizedCover))
+                            {
+                                trip.CoverImageUrl = normalizedCover;
+                                _repo.Update(trip);
+
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    var idx = Trips.IndexOf(trip);
+                                    if (idx >= 0)
+                                    {
+                                        Trips.RemoveAt(idx);
+                                        Trips.Insert(idx, trip);
+                                    }
+                                    TripsView.Refresh();
+                                });
+
+                                return;
+                            }
+
+                            var rawDest = (trip.Destination ?? "").Trim();
+                            var rawCountry = (trip.Country ?? "").Trim();
+
+                            // Handle cases where Destination is stored as "City, Country".
+                            string city;
+                            string? country;
+                            if (rawDest.Contains(',', StringComparison.Ordinal) && string.IsNullOrWhiteSpace(rawCountry))
+                            {
+                                var parts = rawDest.Split(',', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                city = parts.Length > 0 ? parts[0] : rawDest;
+                                country = parts.Length > 1 ? parts[1] : null;
+                            }
+                            else
+                            {
+                                city = rawDest;
+                                country = string.IsNullOrWhiteSpace(rawCountry) ? null : rawCountry;
+                            }
+
+                            // Fallback for older rows: if Destination is empty, try to infer from Name:
+                            // "City Break - Odesa" -> "Odesa"
+                            if (string.IsNullOrWhiteSpace(city))
+                            {
+                                var name = (trip.Name ?? "").Trim();
+                                if (!string.IsNullOrWhiteSpace(name))
+                                {
+                                    var idx = name.LastIndexOf('-');
+                                    if (idx >= 0 && idx < name.Length - 1)
+                                        city = name[(idx + 1)..].Trim();
+                                    if (string.IsNullOrWhiteSpace(city))
+                                        city = name;
+                                }
+                            }
+
+                            if (string.IsNullOrWhiteSpace(city))
+                                return;
+
+                            var url =
+                                $"{ApiBaseUrl}/api/destinations/images" +
+                                $"?city={Uri.EscapeDataString(city)}" +
+                                (string.IsNullOrWhiteSpace(country) ? "" : $"&country={Uri.EscapeDataString(country)}") +
+                                $"&limit=12" +
+                                $"&seed={trip.Id}";
+
+                            using var resp = await _coverHttp.GetAsync(url);
+                            if (!resp.IsSuccessStatusCode)
+                                return;
+
+                            var json = await resp.Content.ReadAsStringAsync();
+                            using var doc = JsonDocument.Parse(json);
+                            if (!doc.RootElement.TryGetProperty("images", out var images) ||
+                                images.ValueKind != JsonValueKind.Array ||
+                                images.GetArrayLength() == 0)
+                                return;
+
+                            // Pick a deterministic "random" image per package so cards don't all look identical.
+                            var count = images.GetArrayLength();
+                            var start = Math.Abs(trip.Id.GetHashCode()) % count;
+
+                            var currentCover = (trip.CoverImageUrl ?? "").Trim();
+                            string cover = "";
+                            for (var i = 0; i < count; i++)
+                            {
+                                var idx = (start + i) % count;
+                                var item = images[idx];
+
+                                // Prefer thumbUrl (lighter) for card banners, fallback to url.
+                                var candidate =
+                                    (item.TryGetProperty("thumbUrl", out var thumbEl) ? (thumbEl.GetString() ?? "") : "").Trim();
+                                if (candidate.Length == 0)
+                                    candidate =
+                                        (item.TryGetProperty("url", out var urlEl) ? (urlEl.GetString() ?? "") : "").Trim();
+
+                                if (candidate.Length == 0)
+                                    continue;
+
+                                // WPF doesn't support webp/avif/svg out of the box.
+                                // Skip those so cards reliably render images.
+                                if (!IsSupportedCandidateUrl(candidate))
+                                    continue;
+
+                                if (currentCover.Length > 0 &&
+                                    string.Equals(currentCover, candidate, StringComparison.OrdinalIgnoreCase))
+                                    continue;
+
+                                cover = NormalizeCoverUrlForWpf(candidate);
+                                break;
+                            }
+                            if (cover.Length == 0)
+                                return;
+
+                            // Persist
+                            trip.CoverImageUrl = cover;
+                            _repo.Update(trip);
+
+                            // Force UI refresh (TripPackage doesn't implement INotifyPropertyChanged).
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                var idx = Trips.IndexOf(trip);
+                                if (idx >= 0)
+                                {
+                                    Trips.RemoveAt(idx);
+                                    Trips.Insert(idx, trip);
+                                }
+                                TripsView.Refresh();
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("Hydrate cover failed: " + ex);
+                        }
+                        finally
+                        {
+                            gate.Release();
+                        }
+                    });
+
+                await Task.WhenAll(tasks);
+
+                // Force a full view rebind so ImageBrush converters re-evaluate without requiring user search/filter.
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        RecreateTripsView();
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("HydrateMissingCoverImagesAsync failed: " + ex);
+            }
+        }
+
+        // Small helper for gating hydrate in LoadTrips (keeps the static local function in sync).
+        private static bool IsProbablyUnsupportedCoverUrlStatic(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return false;
+            try
+            {
+                if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+                    return false;
+
+                var host = (uri.Host ?? "").ToLowerInvariant();
+                if (host.Contains("wikimedia.org") || host.Contains("wikipedia.org"))
+                    return true;
+
+                if (!host.EndsWith("unsplash.com"))
+                    return true;
+
+                var q = (uri.Query ?? "").ToLowerInvariant();
+                if (q.Contains("fm=webp") || q.Contains("fm=avif") || q.Contains("format=webp") || q.Contains("format=avif"))
+                    return true;
+                if (q.Contains("auto=format"))
+                    return true;
+
+                var path = uri.AbsolutePath ?? "";
+                var ext = Path.GetExtension(path);
+                if (string.IsNullOrWhiteSpace(ext))
+                    return false;
+
+                ext = ext.Trim().ToLowerInvariant();
+                return ext is ".webp" or ".avif" or ".svg";
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public void SelectTripById(int tripId)
@@ -345,33 +836,23 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             try
             {
-                var tripType = string.IsNullOrWhiteSpace(TripType) ? "Budget" : TripType;
-                var transportType = string.IsNullOrWhiteSpace(TransportType) ? "Train" : TransportType;
+                var quick = _navigation.CreateQuickCreatePackageWindow();
+                var result = quick.ShowDialog();
+                if (result != true || quick.CreatedTrip == null)
+                    return;
 
-                var name = string.IsNullOrWhiteSpace(Name)
-                    ? $"{tripType} {transportType} Trip"
-                    : Name.Trim();
+                // Quick-create does not force cover selection; immediately open full editor
+                // so the user can pick the cover image and details.
+                var createdId = quick.CreatedTrip.Id;
+                var created = _repo.GetById(createdId) ?? quick.CreatedTrip;
+                var edit = _navigation.CreateEditPackageWindow(created);
+                var editResult = edit.ShowDialog();
 
-                if (!double.TryParse(PriceText, out var price))
-                    price = tripType == "Premium" ? 2000 : 1000;
-
-                var request = new TripRequest
-                {
-                    PackageName = name,
-                    TripType = tripType,
-                    Category = tripType,
-                    TransportType = transportType,
-                    BasePrice = price,
-                    FinalPrice = price
-                };
-
-                var trip = _tripCreationService.CreateTrip(request);
-
-                _repo.Add(trip);
-                Trips.Add(trip);
-                SelectedTrip = trip;
-
-                Status = $"Created (Quick): {trip.Name} | {trip.TransportName} | {trip.StayName}";
+                LoadTrips();
+                SelectedTrip = Trips.FirstOrDefault(x => x.Id == createdId) ?? Trips.LastOrDefault();
+                Status = editResult == true
+                    ? "Package created and updated successfully."
+                    : "Package created successfully.";
             }
             catch (Exception ex)
             {
@@ -382,53 +863,14 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             try
             {
-                var season = new Season
+                var window = _navigation.CreateNewPackageWindow();
+                var result = window.ShowDialog();
+                if (result == true)
                 {
-                    Name = "Summer",
-                    StartDate = new DateTime(DateTime.Now.Year, 6, 1),
-                    EndDate = new DateTime(DateTime.Now.Year, 8, 31)
-                };
-
-                if (!double.TryParse(PriceText, out var price))
-                    price = 1200;
-
-                var request = new TripRequest
-                {
-                    PackageName = string.IsNullOrWhiteSpace(Name) ? "Builder Trip" : Name.Trim(),
-                    TripType = string.IsNullOrWhiteSpace(TripType) ? "Premium" : TripType,
-                    Category = string.IsNullOrWhiteSpace(TripType) ? "Premium" : TripType,
-                    ShortDescription = "Created with Builder",
-                    Destination = "Rome",
-                    Country = "Italy",
-                    StartDate = season.StartDate,
-                    EndDate = season.EndDate,
-                    NumberOfDays = (season.EndDate - season.StartDate).Days,
-                    TransportType = string.IsNullOrWhiteSpace(TransportType) ? "Plane" : TransportType,
-                    DepartureCity = "Chisinau",
-                    AccommodationType = "Hotel",
-                    AccommodationName = "Hotel Roma",
-                    MealPlan = "Breakfast",
-                    AvailableSeats = 10,
-                    AirportTransfer = true,
-                    TravelInsurance = true,
-                    TourGuide = true,
-                    FreeCancellation = false,
-                    BasePrice = price,
-                    DiscountPercent = 0,
-                    VatPercent = 0,
-                    ExtraCharges = 0,
-                    FinalPrice = price
-                };
-
-                var trip = _tripCreationService.CreateTrip(request);
-
-                _repo.Add(trip);
-
-          
-                Trips.Add(trip);
-                SelectedTrip = trip;
-
-                Status = $"Created (Custom): {trip.Name} | {trip.TransportName} | {trip.StayName}";
+                    LoadTrips();
+                    SelectedTrip = Trips.LastOrDefault();
+                    Status = "Package created successfully.";
+                }
             }
             catch (Exception ex)
             {
@@ -675,6 +1117,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             set => Set(ref _packagesVisibility, value);
         }
 
+        private Visibility _dashboardVisibility = Visibility.Visible;
+        public Visibility DashboardVisibility
+        {
+            get => _dashboardVisibility;
+            set => Set(ref _dashboardVisibility, value);
+        }
+
         private Visibility _reportsVisibility = Visibility.Collapsed;
         public Visibility ReportsVisibility
         {
@@ -682,39 +1131,99 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             set => Set(ref _reportsVisibility, value);
         }
 
+        private Visibility _clientsVisibility = Visibility.Collapsed;
+        public Visibility ClientsVisibility
+        {
+            get => _clientsVisibility;
+            set => Set(ref _clientsVisibility, value);
+        }
+
+        private void ShowDashboard()
+        {
+            DashboardVisibility = Visibility.Visible;
+            PackagesVisibility = Visibility.Collapsed;
+            ReportsVisibility = Visibility.Collapsed;
+            ClientsVisibility = Visibility.Collapsed;
+
+            IsDashboardVisible = true;
+            IsPackagesVisible = false;
+            IsBookingsVisible = false;
+            IsReportsVisible = false;
+            IsClientsVisible = false;
+
+            NavSection = "Dashboard";
+            RefreshDashboardBookings();
+        }
+
         private void ShowReports()
         {
+            DashboardVisibility = Visibility.Collapsed;
             PackagesVisibility = Visibility.Collapsed;
             ReportsVisibility = Visibility.Visible;
+            ClientsVisibility = Visibility.Collapsed;
 
             IsDashboardVisible = false;
             IsPackagesVisible = false;
             IsBookingsVisible = false;
             IsReportsVisible = true;
+            IsClientsVisible = false;
+
+            NavSection = "Reports";
         }
 
         private void ShowPackages()
         {
+            DashboardVisibility = Visibility.Collapsed;
             PackagesVisibility = Visibility.Visible;
             ReportsVisibility = Visibility.Collapsed;
+            ClientsVisibility = Visibility.Collapsed;
 
             IsDashboardVisible = false;
             IsPackagesVisible = true;
             IsBookingsVisible = false;
             IsReportsVisible = false;
+            IsClientsVisible = false;
+
+            NavSection = "Packages";
+
+            // When the packages view is first shown, templates are created and converters run.
+            // If the API/proxy is still warming up, converters may fall back to defaults.
+            // Trigger a delayed hard refresh (same effect as user filtering) so images appear automatically.
+            _ = RefreshTripsViewOnceApiReadyAsync();
         }
 
         private void ShowBookings()
         {
+            DashboardVisibility = Visibility.Collapsed;
             PackagesVisibility = Visibility.Collapsed;
             ReportsVisibility = Visibility.Collapsed;
+            ClientsVisibility = Visibility.Collapsed;
 
             IsDashboardVisible = false;
             IsPackagesVisible = false;
             IsBookingsVisible = true;
             IsReportsVisible = false;
+            IsClientsVisible = false;
 
+            NavSection = "Bookings";
             LoadAllBookings();
+        }
+
+        private void ShowClients()
+        {
+            DashboardVisibility = Visibility.Collapsed;
+            PackagesVisibility = Visibility.Collapsed;
+            ReportsVisibility = Visibility.Collapsed;
+            ClientsVisibility = Visibility.Visible;
+
+            IsDashboardVisible = false;
+            IsPackagesVisible = false;
+            IsBookingsVisible = false;
+            IsReportsVisible = false;
+            IsClientsVisible = true;
+
+            NavSection = "Clients";
+            LoadRecentClients();
         }
 
         private void GenerateReport()
@@ -791,6 +1300,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
                 AllBookings.Insert(0, bookingEvent.Booking);
 
+                AddNotificationForBookingEvent(bookingEvent);
+                RefreshRecentBookings();
                 RefreshReportPreview();
 
                 if (IsBookingsVisible)
@@ -812,6 +1323,92 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     }
                 }
             });
+        }
+
+        private void RefreshRecentBookings()
+        {
+            RecentBookings.Clear();
+
+            foreach (var b in AllBookings
+                         .OrderByDescending(x => x.BookingDate)
+                         .Take(8))
+            {
+                RecentBookings.Add(b);
+            }
+        }
+
+        private void RefreshDashboardBookings()
+        {
+            DashboardBookings.Clear();
+
+            IEnumerable<Booking> source = AllBookings;
+
+            source = DashboardBookingFilter switch
+            {
+                "Pending" => source.Where(b => string.Equals(b.Status?.Name, "Pending", StringComparison.OrdinalIgnoreCase)),
+                "Confirmed" => source.Where(b => string.Equals(b.Status?.Name, "Confirmed", StringComparison.OrdinalIgnoreCase)),
+                "Cancelled" => source.Where(b =>
+                    string.Equals(b.Status?.Name, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(b.Status?.Name, "Canceled", StringComparison.OrdinalIgnoreCase)),
+                _ => source
+            };
+
+            foreach (var b in source
+                         .OrderByDescending(x => x.BookingDate)
+                         .Take(6))
+            {
+                DashboardBookings.Add(b);
+            }
+        }
+
+        private void LoadRecentClients()
+        {
+            RecentClients.Clear();
+
+            var query = _userRepository.GetAll()
+                .Where(u => string.Equals(u.Role?.Name, "Client", StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(ClientSearchText))
+            {
+                query = query.Where(u =>
+                    (u.Username ?? "").Contains(ClientSearchText, StringComparison.OrdinalIgnoreCase) ||
+                    (u.Email ?? "").Contains(ClientSearchText, StringComparison.OrdinalIgnoreCase));
+            }
+
+            foreach (var u in query.Take(8))
+                RecentClients.Add(u);
+        }
+
+        private void AddNotificationForBookingEvent(BookingStatusChangedEvent bookingEvent)
+        {
+            var title = bookingEvent.NewStatus switch
+            {
+                "Confirmed" => "Rezervare confirmată",
+                "Rejected" => "Rezervare respinsă",
+                "Pending" => "Rezervare în așteptare",
+                _ => "Rezervare actualizată"
+            };
+
+            var message = $"{bookingEvent.Booking?.Client?.Username ?? "Client"} • {bookingEvent.Booking?.TripPackage?.Name ?? "Pachet"}";
+
+            var accent = bookingEvent.NewStatus switch
+            {
+                "Confirmed" => "#16A34A",
+                "Rejected" => "#F43F5E",
+                "Pending" => "#F59E0B",
+                _ => "#6366F1"
+            };
+
+            Notifications.Insert(0, new AgentNotificationItem
+            {
+                Title = title,
+                Message = message,
+                Timestamp = DateTime.Now,
+                AccentColor = accent
+            });
+
+            while (Notifications.Count > 10)
+                Notifications.RemoveAt(Notifications.Count - 1);
         }
 
         private bool _isDashboardVisible;
@@ -840,6 +1437,13 @@ public bool IsReportsVisible
 {
     get => _isReportsVisible;
     set => Set(ref _isReportsVisible, value);
+}
+
+private bool _isClientsVisible;
+public bool IsClientsVisible
+{
+    get => _isClientsVisible;
+    set => Set(ref _isClientsVisible, value);
 }
         private void Logout()
         {

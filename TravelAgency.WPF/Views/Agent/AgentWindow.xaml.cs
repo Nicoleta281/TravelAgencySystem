@@ -49,10 +49,18 @@ namespace TravelAgency.WPF.Views.Agent
 
         private void EditPackage_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not AgentViewModel vm || vm.SelectedTrip == null)
+            if (DataContext is not AgentViewModel vm)
                 return;
 
-            var window = _navigation.CreateEditPackageWindow(vm.SelectedTrip);
+            var trip = (sender as FrameworkElement)?.Tag as dynamic;
+            var selected = vm.SelectedTrip;
+
+            // Prefer explicit item from the clicked card; fallback to SelectedTrip
+            var targetTrip = trip ?? selected;
+            if (targetTrip == null)
+                return;
+
+            var window = _navigation.CreateEditPackageWindow(targetTrip);
             var result = window.ShowDialog();
 
             if (result == true)
