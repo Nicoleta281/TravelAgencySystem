@@ -1,4 +1,7 @@
 ﻿using FluentValidation;
+using System;
+using System.IO;
+using System.Net.Sockets;
 using System.Windows;
 using System.Windows.Input;
 using TravelAgency.Core.Data.Repositories;
@@ -87,20 +90,51 @@ namespace TravelAgency.WPF.ViewModels
                 return;
             }
 
-            var user = _authenticationService.Authenticate(request.Email, request.Password);
-
-            if (user == null)
+            try
             {
-                ErrorMessage = "Invalid email or password.";
-                return;
+                var user = _authenticationService.Authenticate(request.Email, request.Password);
+
+                if (user == null)
+                {
+                    ErrorMessage = "Invalid email or password.";
+                    return;
+                }
+
+                user.Login();
+                _userRepository.Update(user);
+
+                SessionManager.Instance.CurrentSession.StartSession(user);
+
+                _mediator.Publish(new UserLoggedInMessage(user, _loginWindow));
+            }
+            catch (Exception ex) when (IsLikelyDatabaseOrNetworkFailure(ex))
+            {
+                ErrorMessage =
+                    "Nu mă pot conecta stabil la baza de date. Verifică că PostgreSQL rulează, rețeaua/VPN-ul, " +
+                    "șirul TravelAgencyDb și variabila TRAVEL_AGENCY_DB_PASSWORD, apoi încearcă din nou.";
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Eroare la autentificare: {ex.Message}";
+            }
+        }
+
+        private static bool IsLikelyDatabaseOrNetworkFailure(Exception ex)
+        {
+            for (var cur = ex; cur != null; cur = cur.InnerException)
+            {
+                if (cur is IOException or SocketException or TimeoutException)
+                    return true;
+
+                if (string.Equals(cur.GetType().Namespace, "Npgsql", StringComparison.Ordinal))
+                    return true;
+
+                if (cur is InvalidOperationException io &&
+                    io.Message.Contains("transient", StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
 
-            user.Login();
-            _userRepository.Update(user);
-
-            SessionManager.Instance.CurrentSession.StartSession(user);
-
-            _mediator.Publish(new UserLoggedInMessage(user, _loginWindow));
+            return false;
         }
 
         private void OpenRegister()

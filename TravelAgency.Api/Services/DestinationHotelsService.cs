@@ -41,7 +41,8 @@ public sealed class DestinationHotelsService
             return new DestinationHotelsResponse(city, country, checkIn, checkOut, adults, []);
 
         var query = string.IsNullOrWhiteSpace(country) ? city : $"{city}, {country}";
-        var key = Slugify($"{query}|{checkIn:yyyyMMdd}|{checkOut:yyyyMMdd}|{adults}|{limit}");
+        // v2: hotel image URL prefers SerpApi original_image over tiny thumbnail (cache bust).
+        var key = Slugify($"v2|{query}|{checkIn:yyyyMMdd}|{checkOut:yyyyMMdd}|{adults}|{limit}");
         var cachePath = Path.Combine(_cacheDir, $"{key}.json");
 
         var cached = await TryReadCacheAsync(cachePath, cancellationToken);

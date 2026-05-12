@@ -34,7 +34,12 @@ namespace TravelAgency.Core.Data
                 csb.Password = password;
 
             var options = new DbContextOptionsBuilder<TravelAgencyDbContext>()
-                .UseNpgsql(csb.ConnectionString)
+                .UseNpgsql(
+                    csb.ConnectionString,
+                    npgsql => npgsql.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(20),
+                        errorCodesToAdd: null))
                 .Options;
 
             return new TravelAgencyDbContext(options);

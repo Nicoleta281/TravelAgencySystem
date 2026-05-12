@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using TravelAgency.Core.Interfaces;
 using TravelAgency.Core.Patterns.Bridge;
@@ -9,8 +10,10 @@ using TravelAgency.Core.Patterns.Prototypes;
 
 namespace TravelAgency.Core.Models.TripPkg.Package
 {
-    public class TripPackage : IPrototype<TripPackage>
+    public class TripPackage : IPrototype<TripPackage>, INotifyPropertyChanged
     {
+        private bool _isFavorite;
+
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public double Price { get; set; }
@@ -49,6 +52,21 @@ namespace TravelAgency.Core.Models.TripPkg.Package
         public string TransportDisplayName { get; set; } = "";
         public string StayDisplayName { get; set; } = "";
         public IExtraServiceComponent? ExtraServiceBundle { get; set; }
+
+        /// <summary>UI: marcat ca favorit pentru clientul curent (nu e persistat pe entitate; se sincronizează din DB).</summary>
+        public bool IsFavorite
+        {
+            get => _isFavorite;
+            set
+            {
+                if (_isFavorite == value)
+                    return;
+                _isFavorite = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFavorite)));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         // Bridge (Abstraction). The itinerary delegates to Transport/Stay implementors,
         // making the "experience" hierarchy independent from implementor hierarchies.
@@ -116,6 +134,8 @@ namespace TravelAgency.Core.Models.TripPkg.Package
 
             copy.ExtraServices = ExtraServices?.ToList() ?? new List<IExtraService>();
             copy.Days = Days?.ToList() ?? new List<TripDay>();
+
+            copy.IsFavorite = false;
 
             // Flyweight ramane shared intentionat
             copy.SharedInfo = SharedInfo;

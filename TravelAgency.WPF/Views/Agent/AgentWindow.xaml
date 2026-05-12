@@ -11,8 +11,7 @@
         TextOptions.TextFormattingMode="Display">
 
     <Window.Resources>
-
-        <!-- Siluetă avion mică pentru stratul „cer” -->
+      
         <Geometry x:Key="AgentSkyPlaneGeometry">M2,18 L36,11 L44,11 L38,19 L28,17 L2,21 Z</Geometry>
 
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -42,54 +41,136 @@
                           Opacity="0.18"
                           Color="#020617"/>
 
-        <!-- Minimal scrollbars (C) -->
-        <Style TargetType="{x:Type ScrollBar}">
-            <Setter Property="Width" Value="10"/>
+        <!-- ScrollBar subțire, neutru (slate) — același limbaj vizual ca Quick Create; nu pe întreaga fereastră ca să nu afecteze popup ComboBox. -->
+        <ControlTemplate x:Key="AgentThinScrollBarVertical" TargetType="ScrollBar">
+            <Grid x:Name="Root" Width="10" SnapsToDevicePixels="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="0"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="0"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="1"
+                        Width="5"
+                        HorizontalAlignment="Center"
+                        Margin="0,6"
+                        CornerRadius="3"
+                        Background="#E2E8F0"/>
+                <Track x:Name="PART_Track"
+                       Grid.Row="1"
+                       IsDirectionReversed="True"
+                       Focusable="False">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                      Opacity="0"
+                                      Height="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                      Opacity="0"
+                                      Height="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb>
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border x:Name="T"
+                                            Width="6"
+                                            MinHeight="28"
+                                            CornerRadius="3"
+                                            Margin="2,0"
+                                            Background="#94A3B8"/>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="T" Property="Background" Value="#64748B"/>
+                                        </Trigger>
+                                        <Trigger Property="IsDragging" Value="True">
+                                            <Setter TargetName="T" Property="Background" Value="#475569"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="AgentThinScrollBarHorizontal" TargetType="ScrollBar">
+            <Grid Height="10" SnapsToDevicePixels="True">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="0"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="1"
+                        Height="5"
+                        VerticalAlignment="Center"
+                        Margin="6,0"
+                        CornerRadius="3"
+                        Background="#E2E8F0"/>
+                <Track x:Name="PART_Track"
+                       Grid.Column="1"
+                       IsDirectionReversed="False"
+                       Focusable="False">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}"
+                                      Opacity="0"
+                                      Width="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}"
+                                      Opacity="0"
+                                      Width="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb>
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border x:Name="Th"
+                                            Height="6"
+                                            MinWidth="36"
+                                            CornerRadius="3"
+                                            Margin="0,2"
+                                            Background="#94A3B8"/>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Th" Property="Background" Value="#64748B"/>
+                                        </Trigger>
+                                        <Trigger Property="IsDragging" Value="True">
+                                            <Setter TargetName="Th" Property="Background" Value="#475569"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <Style x:Key="AgentThinScrollBarChrome" TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ScrollBar}">
-                        <Grid SnapsToDevicePixels="True"
-                              Background="Transparent">
-                            <Track x:Name="PART_Track"
-                                   IsDirectionReversed="True">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="ScrollBar.LineUpCommand"
-                                                  Opacity="0"
-                                                  Focusable="False"
-                                                  IsTabStop="False"/>
-                                </Track.DecreaseRepeatButton>
-                                <Track.Thumb>
-                                    <Thumb x:Name="Thumb"
-                                           Margin="2"
-                                           Background="#66FFFFFF">
-                                        <Thumb.Template>
-                                            <ControlTemplate TargetType="{x:Type Thumb}">
-                                                <Border Background="{TemplateBinding Background}"
-                                                        CornerRadius="10"/>
-                                            </ControlTemplate>
-                                        </Thumb.Template>
-                                    </Thumb>
-                                </Track.Thumb>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="ScrollBar.LineDownCommand"
-                                                  Opacity="0"
-                                                  Focusable="False"
-                                                  IsTabStop="False"/>
-                                </Track.IncreaseRepeatButton>
-                            </Track>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger SourceName="Thumb" Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Thumb" Property="Background" Value="#99FFFFFF"/>
-                            </Trigger>
-                            <Trigger SourceName="Thumb" Property="IsDragging" Value="True">
-                                <Setter TargetName="Thumb" Property="Background" Value="#CCFFFFFF"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template" Value="{StaticResource AgentThinScrollBarVertical}"/>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="MinWidth" Value="0"/>
+                    <Setter Property="Height" Value="10"/>
+                    <Setter Property="MinHeight" Value="10"/>
+                    <Setter Property="Template" Value="{StaticResource AgentThinScrollBarHorizontal}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="{x:Type ScrollViewer}">
@@ -966,6 +1047,9 @@
                       Visibility="{Binding DashboardVisibility}"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AgentThinScrollBarChrome}"/>
+            </ScrollViewer.Resources>
             <Border Background="Transparent" Padding="18">
             <Grid TextElement.FontSize="14">
                 <Grid.RowDefinitions>
@@ -1756,6 +1840,9 @@
                           HorizontalScrollBarVisibility="Disabled"
                           Background="Transparent"
                           BorderThickness="0">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource AgentThinScrollBarChrome}"/>
+                </ScrollViewer.Resources>
                 <Border MaxWidth="860"
                         HorizontalAlignment="Center"
                         Padding="0,0,0,8">
@@ -2087,6 +2174,9 @@
                       Visibility="{Binding PackagesVisibility}"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource AgentThinScrollBarChrome}"/>
+            </ScrollViewer.Resources>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>

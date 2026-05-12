@@ -33,8 +33,10 @@ namespace TravelAgency.WPF
     {
         public static IServiceProvider Services { get; private set; } = null!;
         public static IMediator Mediator { get; private set; } = null!;
+#if DEBUG
         private System.Diagnostics.Process? _apiProcess;
         private bool _apiStartedByThisApp;
+#endif
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -242,6 +244,7 @@ namespace TravelAgency.WPF
             services.AddTransient<ITripPackageRepository, EfTripPackageRepository>();
             services.AddTransient<IBookingRepository, EfBookingRepository>();
             services.AddTransient<IUserMessageRepository, EfUserMessageRepository>();
+            services.AddTransient<IClientPackageFavoriteRepository, EfClientPackageFavoriteRepository>();
             services.AddTransient<IAdminAnalyticsSnapshotRepository>(_ =>
                 new EfAdminAnalyticsSnapshotRepository(TravelAgencyDbContextFactory.Create()));
             services.AddTransient<AuthenticationService>();

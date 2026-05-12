@@ -87,33 +87,8 @@ namespace TravelAgency.WPF.Converters
 
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
-            // 1) Destination-based image (recommended)
-            // Drop files next to the exe:
-            //   Assets/Destinations/<DestinationSlug>.jpg|png|jpeg|webp
-            // Example: Destination="Paris" -> Assets/Destinations/paris.jpg
-            var dest = (trip.Destination ?? "").Trim();
-            if (!string.IsNullOrWhiteSpace(dest))
-            {
-                var destDir = Path.Combine(baseDir, "Assets", "Destinations");
-                var slug = Slugify(dest);
-                var existing = FirstExistingBySlug(destDir, slug);
-                if (!string.IsNullOrWhiteSpace(existing))
-                    return LoadFromFile(existing);
-
-                // Also try "country + destination" if you prefer that naming.
-                var country = (trip.Country ?? "").Trim();
-                if (!string.IsNullOrWhiteSpace(country))
-                {
-                    var slug2 = Slugify($"{country}-{dest}");
-                    var existing2 = FirstExistingBySlug(destDir, slug2);
-                    if (!string.IsNullOrWhiteSpace(existing2))
-                        return LoadFromFile(existing2);
-                }
-            }
-
-            // Optional convention: you can drop files next to the exe:
-            //   Assets/Packages/<TripId>.jpg|png|jpeg|webp
-            // This avoids DB changes while still allowing per-package images.
+            // 1) Per-package files (wins over shared destination art — avoids „same photo for every Paris card”).
+            //    Drop files next to the exe: Assets/Packages/<TripId>.jpg|png|jpeg|webp
             var packagesDir = Path.Combine(baseDir, "Assets", "Packages");
             if (Directory.Exists(packagesDir))
             {
@@ -130,8 +105,40 @@ namespace TravelAgency.WPF.Converters
                     return LoadFromFile(existing);
             }
 
-            // Fallback: deterministic pick so each package "feels" different.
-            var idx = Math.Abs(trip.Id.GetHashCode()) % FallbackPackUris.Length;
+            // 2) Destination-based image (shared by all packages with that destination — intentional).
+            //    Assets/Destinations/<DestinationSlug>.jpg|png|jpeg|webp
+            var dest = (trip.Destination ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(dest))
+            {
+                var destDir = Path.Combine(baseDir, "Assets", "Destinations");
+                var slug = Slugify(dest);
+                if (slug.Length > 0)
+                {
+                    var existing = FirstExistingBySlug(destDir, slug);
+                    if (!string.IsNullOrWhiteSpace(existing))
+                        return LoadFromFile(existing);
+
+                    var country = (trip.Country ?? "").Trim();
+                    if (!string.IsNullOrWhiteSpace(country))
+                    {
+                        var slug2 = Slugify($"{country}-{dest}");
+                        if (slug2.Length > 0)
+                        {
+                            var existing2 = FirstExistingBySlug(destDir, slug2);
+                            if (!string.IsNullOrWhiteSpace(existing2))
+                                return LoadFromFile(existing2);
+                        }
+                    }
+                }
+            }
+
+            // 3) Fallback pack art: spread by more than Id so clones / sequential ids don’t cluster on the same image.
+            var mix = HashCode.Combine(
+                trip.Id,
+                trip.Name ?? "",
+                trip.Destination ?? "",
+                trip.Country ?? "");
+            var idx = Math.Abs(mix) % FallbackPackUris.Length;
             return LoadFromPackUri(FallbackPackUris[idx]);
         }
 

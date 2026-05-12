@@ -12,6 +12,7 @@ namespace TravelAgency.Core.Data
         public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
         public DbSet<PasswordResetLinkTokenEntity> PasswordResetLinkTokens => Set<PasswordResetLinkTokenEntity>();
         public DbSet<UserMessageEntity> UserMessages => Set<UserMessageEntity>();
+        public DbSet<ClientPackageFavoriteEntity> ClientPackageFavorites => Set<ClientPackageFavoriteEntity>();
 
         public TravelAgencyDbContext(DbContextOptions<TravelAgencyDbContext> options)
             : base(options) { }
@@ -103,6 +104,15 @@ namespace TravelAgency.Core.Data
                 e.Property(x => x.SentAtUtc).IsRequired();
                 e.HasIndex(x => new { x.ToUsername, x.IsRead });
                 e.HasIndex(x => new { x.FromUsername, x.ToUsername, x.SentAtUtc });
+            });
+
+            modelBuilder.Entity<ClientPackageFavoriteEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedOnAdd();
+                e.Property(x => x.ClientUsername).IsRequired().HasMaxLength(128);
+                e.Property(x => x.SavedAtUtc).IsRequired();
+                e.HasIndex(x => new { x.ClientUsername, x.TripPackageId }).IsUnique();
             });
         }
     }

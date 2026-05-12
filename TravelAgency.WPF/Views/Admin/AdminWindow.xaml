@@ -16,6 +16,8 @@
         FontFamily="Segoe UI Variable Display, Segoe UI, SystemFonts.MessageFontFamily"
         Background="#0B1220">
     <Window.Resources>
+        <Style TargetType="ScrollBar" BasedOn="{StaticResource TravelAgencyScrollBarChrome}"/>
+
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:CancellationRatePieGeometryConverter x:Key="CancellationRatePieGeometryConverter"/>
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -86,13 +87,43 @@ namespace TravelAgency.Core.Patterns.Adapters.SerpApi
                     PricePerNight = property.RatePerNight?.ExtractedLowest,
                     TotalPrice = property.TotalRate?.ExtractedLowest,
                     HotelClass = property.ExtractedHotelClass,
-                    ThumbnailUrl = property.Images != null && property.Images.Count > 0
-                        ? property.Images[0].Thumbnail
-                        : string.Empty
+                    ThumbnailUrl = PickBestHotelImageUrl(property.Images)
                 });
             }
 
             return hotels;
+        }
+
+        /// <summary>Preferă imaginea mare (SerpApi <c>original_image</c>), cu fallback la thumbnail.</summary>
+        private static string PickBestHotelImageUrl(List<SerpApiImage>? images)
+        {
+            if (images == null || images.Count == 0)
+                return string.Empty;
+
+            foreach (var image in images)
+            {
+                var orig = (image.OriginalImage ?? "").Trim();
+                if (orig.Length > 0 && !IsProbablyUnsupportedWpfImageUrl(orig))
+                    return orig;
+            }
+
+            foreach (var image in images)
+            {
+                var th = (image.Thumbnail ?? "").Trim();
+                if (th.Length > 0 && !IsProbablyUnsupportedWpfImageUrl(th))
+                    return th;
+            }
+
+            var first = images[0];
+            return (first.OriginalImage ?? first.Thumbnail ?? "").Trim();
+        }
+
+        private static bool IsProbablyUnsupportedWpfImageUrl(string url)
+        {
+            if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+                return false;
+            var ext = Path.GetExtension(uri.AbsolutePath).ToLowerInvariant();
+            return ext is ".webp" or ".avif" or ".svg";
         }
     }
 }

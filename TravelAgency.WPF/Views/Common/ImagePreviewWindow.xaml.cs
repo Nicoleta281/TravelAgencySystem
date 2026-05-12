@@ -49,8 +49,8 @@ namespace TravelAgency.WPF.Views.Common
                     var t = (u ?? "").Trim();
                     if (t.Length == 0)
                         continue;
-                    if (ordered.Exists(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase)))
-                        continue;
+                    // Nu deduplicăm: altfel indexul primit din UI nu mai corespunde, iar două URL-uri
+                    // „diferite” dar același fișier ar lăsa o singură intrare și ascund săgețile.
                     ordered.Add(t);
                 }
             }
@@ -131,7 +131,7 @@ namespace TravelAgency.WPF.Views.Common
         /// </summary>
         private void UpdateImageViewportConstraint()
         {
-            if (Scroller == null || PreviewImage == null)
+            if (Scroller == null || PreviewViewbox == null)
                 return;
 
             // Padding: outer Border 18 + inner card 14 each side (approx).
@@ -145,8 +145,8 @@ namespace TravelAgency.WPF.Views.Common
 
             var w = Math.Max(120, vw - pad);
             var h = Math.Max(120, vh - pad);
-            PreviewImage.MaxWidth = w;
-            PreviewImage.MaxHeight = h;
+            PreviewViewbox.MaxWidth = w;
+            PreviewViewbox.MaxHeight = h;
         }
 
         private void SetTitle(string? title, string url)

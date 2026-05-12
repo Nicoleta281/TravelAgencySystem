@@ -16,7 +16,12 @@ using TravelAgency.Core.Patterns.Adapters.SerpApi;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContextFactory<TravelAgencyDbContext>(options =>
-    options.UseNpgsql(BuildConnectionString(builder.Configuration)));
+    options.UseNpgsql(
+        BuildConnectionString(builder.Configuration),
+        npgsql => npgsql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(20),
+            errorCodesToAdd: null)));
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();

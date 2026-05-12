@@ -346,8 +346,8 @@
             </Grid>
         </ControlTemplate>
 
-        <!-- Stil implicit pentru toate ScrollBar-urile din aplicație -->
-        <Style TargetType="ScrollBar">
+        <!-- Stil scrollbar „travel” — doar cu cheie; implicit la nivel de Application rupe popup-urile ComboBox (listă goală). -->
+        <Style x:Key="TravelAgencyScrollBarChrome" TargetType="ScrollBar">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Width" Value="24"/>

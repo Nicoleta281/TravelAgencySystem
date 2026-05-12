@@ -27,7 +27,16 @@ namespace TravelAgency.Core.Data
             };
 
             var options = new DbContextOptionsBuilder<TravelAgencyDbContext>()
-                .UseNpgsql(csb.ConnectionString)
+                .UseNpgsql(
+                    csb.ConnectionString,
+                    npgsql =>
+                    {
+                        // Reducează erorile „connection forcibly closed” / timeout-uri scurte la rețea.
+                        npgsql.EnableRetryOnFailure(
+                            maxRetryCount: 5,
+                            maxRetryDelay: TimeSpan.FromSeconds(20),
+                            errorCodesToAdd: null);
+                    })
                 .Options;
 
             return new TravelAgencyDbContext(options);

@@ -198,10 +198,18 @@
                             Background="#334155"
                             Foreground="#E2E8F0"
                             BorderBrush="#475569"
-                            FontFamily="Segoe MDL2 Assets"
-                            Content="&#xE72B;"
                             ToolTip="Previous image (←)"
-                            Click="PrevNav_Click"/>
+                            Click="PrevNav_Click">
+                        <Path Width="10"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="#E2E8F0"
+                              StrokeThickness="2"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M 10,2 L 2,10 L 10,18"/>
+                    </Button>
                     <TextBlock x:Name="PositionText"
                                MinWidth="48"
                                TextAlignment="Center"
@@ -217,10 +225,18 @@
                             Background="#334155"
                             Foreground="#E2E8F0"
                             BorderBrush="#475569"
-                            FontFamily="Segoe MDL2 Assets"
-                            Content="&#xE72C;"
                             ToolTip="Next image (→)"
-                            Click="NextNav_Click"/>
+                            Click="NextNav_Click">
+                        <Path Width="10"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="#E2E8F0"
+                              StrokeThickness="2"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M 2,2 L 10,10 L 2,18"/>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -265,14 +281,18 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
                             <Grid>
-                                <Image x:Name="PreviewImage"
-                                       Stretch="Uniform"
-                                       RenderOptions.BitmapScalingMode="HighQuality">
-                                    <!-- LayoutTransform (not RenderTransform) so zoom changes layout and ScrollViewer can pan. -->
-                                    <Image.LayoutTransform>
+                                <!-- Viewbox + Stretch=None: păstrează aspect ratio fără „întindere” la MaxWidth/MaxHeight + LayoutTransform. -->
+                                <Viewbox x:Name="PreviewViewbox"
+                                         Stretch="Uniform"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center">
+                                    <Viewbox.LayoutTransform>
                                         <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1"/>
-                                    </Image.LayoutTransform>
-                                </Image>
+                                    </Viewbox.LayoutTransform>
+                                    <Image x:Name="PreviewImage"
+                                           Stretch="None"
+                                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                </Viewbox>
 
                                 <Border x:Name="LoadingOverlay"
                                         Background="#99111827"
@@ -297,6 +317,7 @@
 
                 <!-- Prev/next over image; Grid has no Background so clicks pass through to ScrollViewer except on buttons. -->
                 <Grid x:Name="GalleryOverlayNav"
+                      Panel.ZIndex="2"
                       Visibility="Collapsed">
                     <Button x:Name="OverlayPrevButton"
                             Width="48"
@@ -306,15 +327,21 @@
                             Margin="10,0,0,0"
                             Padding="0"
                             Cursor="Hand"
-                            FontFamily="Segoe MDL2 Assets"
-                            Content="&#xE72B;"
-                            FontSize="18"
-                            Foreground="#F1F5F9"
                             Background="#990F172A"
                             BorderBrush="#66E2E8F0"
                             BorderThickness="1"
                             ToolTip="Previous (←)"
-                            Click="PrevNav_Click"/>
+                            Click="PrevNav_Click">
+                        <Path Width="14"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="#F1F5F9"
+                              StrokeThickness="2.25"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M 14,3 L 3,14 L 14,25"/>
+                    </Button>
                     <Button x:Name="OverlayNextButton"
                             Width="48"
                             Height="48"
@@ -323,15 +350,21 @@
                             Margin="0,0,10,0"
                             Padding="0"
                             Cursor="Hand"
-                            FontFamily="Segoe MDL2 Assets"
-                            Content="&#xE72C;"
-                            FontSize="18"
-                            Foreground="#F1F5F9"
                             Background="#990F172A"
                             BorderBrush="#66E2E8F0"
                             BorderThickness="1"
                             ToolTip="Next image (→)"
-                            Click="NextNav_Click"/>
+                            Click="NextNav_Click">
+                        <Path Width="14"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="#F1F5F9"
+                              StrokeThickness="2.25"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M 3,3 L 14,14 L 3,25"/>
+                    </Button>
                 </Grid>
             </Grid>
         </Border>
