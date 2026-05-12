@@ -52,18 +52,10 @@ namespace TravelAgency.Core.Services
             if (trip == null)
                 throw new InvalidOperationException("Trip package no longer exists.");
 
-            // Capacity rule (Variant 1):
-            // - Pending + Confirmed bookings consume package capacity.
-            // - Confirming moves from Pending -> Confirmed and decrements AvailableSeats once.
+            // Confirmare: AvailableSeats reflectă deja locurile rămase după rezervările confirmate (T − C).
+            // Nu folosim count(Pending+Confirmed) față de AvailableSeats — ar trata C de două ori.
             if (string.Equals(oldStatus, "Pending", StringComparison.OrdinalIgnoreCase))
             {
-                var occupied = _bookingRepository.CountByTripPackageIdAndStatuses(tripPackageId, "Pending", "Confirmed");
-                if (occupied >= trip.AvailableSeats)
-                {
-                    throw new InvalidOperationException(
-                        "Nu mai sunt disponibile locuri pentru acest pachet. Te rugăm să alegi alt pachet sau să încerci mai târziu.");
-                }
-
                 if (trip.AvailableSeats <= 0)
                 {
                     throw new InvalidOperationException(

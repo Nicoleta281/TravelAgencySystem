@@ -43,6 +43,9 @@
     <Compile Update="Views\Agent\QuickCreatePackageWindow.xaml.cs">
       <DependentUpon>QuickCreatePackageWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\Agent\CreatePackageWindow.xaml.cs">
+      <DependentUpon>CreatePackageWindow.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>

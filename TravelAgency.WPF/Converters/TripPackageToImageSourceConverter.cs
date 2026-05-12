@@ -51,19 +51,37 @@ namespace TravelAgency.WPF.Converters
                     var bi = new BitmapImage();
                     bi.BeginInit();
                     bi.UriSource = proxy;
-                    // Keep cards responsive: load asynchronously (OnDemand).
-                    // We already force a post-start refresh in AgentViewModel so images appear without typing in Search.
-                    bi.CacheOption = BitmapCacheOption.OnDemand;
+                    // Use OnLoad so network/proxy failures fall back to placeholder (avoids blank banners).
+                    // Kept small (360px) so it still loads fast.
+                    bi.CacheOption = BitmapCacheOption.OnLoad;
                     bi.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
                     bi.DecodePixelWidth = 360;
                     bi.EndInit();
+                    bi.Freeze();
                     return bi;
                 }
                 catch
                 {
-                    // If a cover exists but cannot be loaded/decoded, do NOT switch to local Assets fallback.
-                    // Show a neutral placeholder instead (prevents "wrong cover" perception).
-                    return CoverLoadPlaceholder;
+                    // If proxy isn't reachable (API not running), try loading the optimized URL directly.
+                    // This keeps Client/Agent banners working even without the local API.
+                    try
+                    {
+                        var direct = OptimizeCoverUrlForSpeed(coverUri);
+                        var bi2 = new BitmapImage();
+                        bi2.BeginInit();
+                        bi2.UriSource = direct;
+                        bi2.CacheOption = BitmapCacheOption.OnDemand;
+                        bi2.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                        bi2.DecodePixelWidth = 360;
+                        bi2.EndInit();
+                        return bi2;
+                    }
+                    catch
+                    {
+                        // If a cover exists but cannot be loaded/decoded, do NOT switch to local Assets fallback.
+                        // Show a neutral placeholder instead (prevents "wrong cover" perception).
+                        return CoverLoadPlaceholder;
+                    }
                 }
             }
 

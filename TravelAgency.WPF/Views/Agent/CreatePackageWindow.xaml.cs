@@ -24,8 +24,9 @@ using System.Windows.Media.Animation;
 using TravelAgency.Core.Data.Repositories;
 using System.Windows.Threading;
 using TravelAgency.Core.Patterns.Flyweight;
+using TravelAgency.WPF.Views.Common;
 
-namespace TravelAgency.WPF.Views
+namespace TravelAgency.WPF.Views.Agent
 {
     public partial class CreatePackageWindow : Window
     {
@@ -46,6 +47,9 @@ namespace TravelAgency.WPF.Views
         private int currentStep = 1;
         private bool _isLoading;
 
+        /// <summary>Împiedică auto-commit țară / ștergere destinație în timpul încărcării pachetului din DB.</summary>
+        private bool _hydratingForm;
+
         private bool _suppressHotelSearchLocationSync;
         private bool _hotelSearchLocationDirty;
         private bool _suppressHotelFilterTextChanged;
@@ -60,6 +64,8 @@ namespace TravelAgency.WPF.Views
         private readonly HttpClient _apiHttp = new() { Timeout = TimeSpan.FromSeconds(30) };
         private readonly ITripPackageRepository _tripRepo;
         private CancellationTokenSource? _destinationMediaCts;
+        /// <summary>Full-size destination image URLs in strip order (for preview gallery navigation).</summary>
+        private readonly List<string> _destinationImageGalleryUrls = new();
         private string? _selectedDestinationCoverUrl;
         private string? _selectedDestinationCoverPreviewUrl;
         private string? _lastPreviewRequestedUrl;
@@ -589,7 +595,7 @@ namespace TravelAgency.WPF.Views
             {
                 // Still show a one-item strip when editing / a cover is already stored (Step 1 has no API city yet).
                 TryRenderPersistedCoverStrip();
-                if (DestinationImagesStrip?.Visibility != Visibility.Visible &&
+                if (DestinationImagesStripHost?.Visibility != Visibility.Visible &&
                     !_coverPickedByUser &&
                     string.IsNullOrWhiteSpace(_editingTrip?.CoverImageUrl))
                 {
@@ -760,7 +766,8 @@ namespace TravelAgency.WPF.Views
             var url = (_selectedDestinationCoverUrl ?? _editingTrip?.CoverImageUrl)?.Trim();
             if (string.IsNullOrWhiteSpace(url))
             {
-                DestinationImagesStrip.Visibility = Visibility.Collapsed;
+                if (DestinationImagesStripHost != null)
+                    DestinationImagesStripHost.Visibility = Visibility.Collapsed;
                 return;
             }
 
@@ -960,6 +967,53 @@ namespace TravelAgency.WPF.Views
             }
         }
 
+        private void OpenPreviewForCurrentCover()
+        {
+            try
+            {
+                var url = (_coverPickedByUser ? _selectedDestinationCoverUrl : _selectedDestinationCoverPreviewUrl)
+                          ?? _selectedDestinationCoverUrl
+                          ?? _selectedHotelThumbnailUrl;
+
+                if (string.IsNullOrWhiteSpace(url))
+                    return;
+
+                var list = _destinationImageGalleryUrls.Count > 0
+                    ? (IReadOnlyList<string>)_destinationImageGalleryUrls
+                    : new[] { url.Trim() };
+                var idx = FindDestinationGalleryIndex(url, list);
+                ImagePreviewWindow.ShowForUrls(this, "Cover preview", list, idx >= 0 ? idx : 0);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private static int FindDestinationGalleryIndex(string url, IReadOnlyList<string> list)
+        {
+            var n = NormalizeCoverUrlForWpf(url);
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (string.Equals(NormalizeCoverUrlForWpf(list[i] ?? ""), n, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private void OpenDestinationImagePreview(string fullUrl)
+        {
+            if (_destinationImageGalleryUrls.Count == 0)
+            {
+                ImagePreviewWindow.ShowForUrl(this, "Destination image", fullUrl);
+                return;
+            }
+
+            var idx = FindDestinationGalleryIndex(fullUrl, _destinationImageGalleryUrls);
+            ImagePreviewWindow.ShowForUrls(this, "Destination image", _destinationImageGalleryUrls, idx >= 0 ? idx : 0);
+        }
+
         private async Task<BitmapImage?> LoadBitmapFromProxyAsync(string sourceUrl, int decodePixelWidth, CancellationToken ct)
         {
             await _proxyLoadGate.WaitAsync(ct);
@@ -1032,6 +1086,11 @@ namespace TravelAgency.WPF.Views
             }
         }
 
+        private void PreviewImageOverlay_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            OpenPreviewForCurrentCover();
+        }
+
         private static string? PickFirstSupportedImageUrl(List<string> urls)
         {
             if (urls == null || urls.Count == 0)
@@ -1063,13 +1122,27 @@ namespace TravelAgency.WPF.Views
 
             if (images.Count == 0)
             {
-                DestinationImagesStrip.Visibility = Visibility.Collapsed;
+                _destinationImageGalleryUrls.Clear();
+                if (DestinationImagesStripHost != null)
+                    DestinationImagesStripHost.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            DestinationImagesStrip.Visibility = Visibility.Visible;
+            if (DestinationImagesStripHost != null)
+                DestinationImagesStripHost.Visibility = Visibility.Visible;
 
-            foreach (var imgOpt in images.Take(6))
+            _destinationImageGalleryUrls.Clear();
+            foreach (var imgOpt in images)
+            {
+                var u = (imgOpt.Url ?? "").Trim();
+                if (u.Length == 0)
+                    continue;
+                if (_destinationImageGalleryUrls.Exists(x => string.Equals(x, u, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                _destinationImageGalleryUrls.Add(u);
+            }
+
+            foreach (var imgOpt in images)
             {
                 var fullUrl = imgOpt.Url;
                 var thumbUrl = imgOpt.ThumbUrl ?? imgOpt.Url;
@@ -1087,7 +1160,7 @@ namespace TravelAgency.WPF.Views
                     RenderTransformOrigin = new Point(0.5, 0.5),
                     RenderTransform = new ScaleTransform(1, 1),
                     Cursor = Cursors.Hand,
-                    ToolTip = "Set as cover"
+                    ToolTip = "Click: set as cover • Double-click or right-click: full size"
                 };
 
                 var grid = new Grid();
@@ -1102,7 +1175,7 @@ namespace TravelAgency.WPF.Views
                     Width = 16,
                     Height = 16,
                     CornerRadius = new CornerRadius(8),
-                    Background = new SolidColorBrush(Color.FromRgb(0x2F, 0x80, 0xED)),
+                    Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x8C, 0xA3)),
                     BorderBrush = new SolidColorBrush(Colors.White),
                     BorderThickness = new Thickness(1),
                     HorizontalAlignment = HorizontalAlignment.Right,
@@ -1147,6 +1220,19 @@ namespace TravelAgency.WPF.Views
                     {
                         Debug.WriteLine("Persist cover-on-click failed: " + ex);
                     }
+                };
+
+                // Right-click or double-click to preview full-size (Border has no MouseDoubleClick).
+                b.MouseRightButtonUp += (_, __) =>
+                {
+                    try { OpenDestinationImagePreview(fullUrl); } catch { }
+                };
+                b.MouseLeftButtonDown += (_, e) =>
+                {
+                    if (e.ClickCount != 2)
+                        return;
+                    e.Handled = true;
+                    try { OpenDestinationImagePreview(fullUrl); } catch { }
                 };
 
                 b.MouseEnter += (_, __) => ApplyDestinationThumbHover(b, isHover: true);
@@ -1502,6 +1588,8 @@ namespace TravelAgency.WPF.Views
             {
                 currentStep++;
                 UpdateWizardUI();
+                if (currentStep == 2 && _editingTrip != null)
+                    _ = PrimeCountryCitiesForStep2IfNeededAsync();
                 UpdateReviewPanel();
             }
             else
@@ -1677,6 +1765,34 @@ namespace TravelAgency.WPF.Views
             }
         }
 
+        private void WizardStepIndicator_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not FrameworkElement el)
+                return;
+            if (!int.TryParse(el.Tag?.ToString(), out var step) || step is < 1 or > 5)
+                return;
+            GoToWizardStep(step);
+            e.Handled = true;
+        }
+
+        /// <summary>Navigare liberă între pași (click pe număr/etichetă); validarea rămâne la Next / Finish.</summary>
+        private void GoToWizardStep(int step)
+        {
+            if (step < 1 || step > 5 || step == currentStep)
+                return;
+
+            currentStep = step;
+            UpdateWizardUI();
+
+            if (currentStep == 5)
+                UpdateReviewPanel();
+
+            UpdateLeftPreview();
+
+            if (currentStep == 2 && _editingTrip != null)
+                _ = PrimeCountryCitiesForStep2IfNeededAsync();
+        }
+
         private static string GetComboBoxText(ComboBox comboBox)
         {
             if (comboBox.SelectedItem is ComboBoxItem item)
@@ -1751,6 +1867,29 @@ namespace TravelAgency.WPF.Views
                 CountryComboBox.IsDropDownOpen = false;
         }
 
+        private static void ApplyWizardStepCircleState(Border circle, bool active)
+        {
+            if (active)
+            {
+                circle.Background = new LinearGradientBrush(
+                    Color.FromRgb(0x2B, 0x8C, 0xA3),
+                    Color.FromRgb(0x1F, 0x5E, 0x6B),
+                    new Point(0, 0),
+                    new Point(1, 1));
+                circle.BorderThickness = new Thickness(0);
+                circle.BorderBrush = Brushes.Transparent;
+            }
+            else
+            {
+                circle.Background = new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9));
+                circle.BorderBrush = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1));
+                circle.BorderThickness = new Thickness(1);
+            }
+
+            if (circle.Child is TextBlock digit)
+                digit.Foreground = active ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B));
+        }
+
         private void UpdateWizardUI()
         {
             if (_lastWizardStep == 2 && currentStep != 2)
@@ -1765,70 +1904,28 @@ namespace TravelAgency.WPF.Views
             BackButton.IsEnabled = currentStep > 1;
             NextButton.Content = currentStep == 5 ? "Finish" : "Next";
 
-            if (currentStep == 1)
-            {
-                Step1Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step1Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step1Label.FontWeight = FontWeights.SemiBold;
-            }
-            else
-            {
-                Step1Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"));
-                Step1Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
-                Step1Label.FontWeight = FontWeights.Normal;
-            }
+            var activeLabel = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F766E")!);
+            var inactiveLabel = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B")!);
 
-            if (currentStep == 2)
-            {
-                Step2Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step2Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step2Label.FontWeight = FontWeights.SemiBold;
-            }
-            else
-            {
-                Step2Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"));
-                Step2Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
-                Step2Label.FontWeight = FontWeights.Normal;
-            }
+            ApplyWizardStepCircleState(Step1Circle, currentStep == 1);
+            Step1Label.Foreground = currentStep == 1 ? activeLabel : inactiveLabel;
+            Step1Label.FontWeight = currentStep == 1 ? FontWeights.SemiBold : FontWeights.Normal;
 
-            if (currentStep == 3)
-            {
-                Step3Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step3Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step3Label.FontWeight = FontWeights.SemiBold;
-            }
-            else
-            {
-                Step3Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"));
-                Step3Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
-                Step3Label.FontWeight = FontWeights.Normal;
-            }
+            ApplyWizardStepCircleState(Step2Circle, currentStep == 2);
+            Step2Label.Foreground = currentStep == 2 ? activeLabel : inactiveLabel;
+            Step2Label.FontWeight = currentStep == 2 ? FontWeights.SemiBold : FontWeights.Normal;
 
-            if (currentStep == 4)
-            {
-                Step4Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step4Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step4Label.FontWeight = FontWeights.SemiBold;
-            }
-            else
-            {
-                Step4Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"));
-                Step4Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
-                Step4Label.FontWeight = FontWeights.Normal;
-            }
+            ApplyWizardStepCircleState(Step3Circle, currentStep == 3);
+            Step3Label.Foreground = currentStep == 3 ? activeLabel : inactiveLabel;
+            Step3Label.FontWeight = currentStep == 3 ? FontWeights.SemiBold : FontWeights.Normal;
 
-            if (currentStep == 5)
-            {
-                Step5Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step5Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2F80ED"));
-                Step5Label.FontWeight = FontWeights.SemiBold;
-            }
-            else
-            {
-                Step5Circle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"));
-                Step5Label.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
-                Step5Label.FontWeight = FontWeights.Normal;
-            }
+            ApplyWizardStepCircleState(Step4Circle, currentStep == 4);
+            Step4Label.Foreground = currentStep == 4 ? activeLabel : inactiveLabel;
+            Step4Label.FontWeight = currentStep == 4 ? FontWeights.SemiBold : FontWeights.Normal;
+
+            ApplyWizardStepCircleState(Step5Circle, currentStep == 5);
+            Step5Label.Foreground = currentStep == 5 ? activeLabel : inactiveLabel;
+            Step5Label.FontWeight = currentStep == 5 ? FontWeights.SemiBold : FontWeights.Normal;
 
             if (currentStep == 3)
             {
@@ -2000,25 +2097,37 @@ namespace TravelAgency.WPF.Views
             if (_editingTrip == null)
                 return;
 
+            _countrySearchCts?.Cancel();
+            _destinationMediaCts?.Cancel();
+            _hydratingForm = true;
             _isLoading = true;
 
             PackageNameTextBox.Text = _editingTrip.Name;
 
-            var tripType = !string.IsNullOrWhiteSpace(_editingTrip.TripType)
+            var tripTypeRaw = !string.IsNullOrWhiteSpace(_editingTrip.TripType)
                 ? _editingTrip.TripType
                 : InferTripTypeFromName(_editingTrip.Name);
+            var tripTypeUi = MapStoredTripTypeToWizardUi(tripTypeRaw, _editingTrip.Name);
 
             var category = !string.IsNullOrWhiteSpace(_editingTrip.Category)
                 ? _editingTrip.Category
                 : InferCategoryFromName(_editingTrip.Name);
 
-            SetComboBoxByText(TripTypeComboBox, tripType);
+            SetComboBoxByText(TripTypeComboBox, tripTypeUi);
             SetComboBoxByText(CategoryComboBox, category);
 
             ShortDescriptionTextBox.Text = _editingTrip.ShortDescription ?? "";
 
-            DestinationComboBox.Text = _editingTrip.Destination;
-            CountryComboBox.Text = _editingTrip.Country;
+            try
+            {
+                _suppressCountrySearch = true;
+                DestinationComboBox.Text = _editingTrip.Destination;
+                CountryComboBox.Text = _editingTrip.Country;
+            }
+            finally
+            {
+                _suppressCountrySearch = false;
+            }
 
             if (string.IsNullOrWhiteSpace(DestinationComboBox.Text) || string.IsNullOrWhiteSpace(CountryComboBox.Text))
             {
@@ -2096,6 +2205,77 @@ namespace TravelAgency.WPF.Views
 
             SyncHotelSearchLocationFromDestination(resetDirty: true);
             UpdateHotelSearchUiState();
+
+            // După layout: încarcă lista de orașe pentru editare (fără să șteargă destinația), apoi deblochează căutarea țării.
+            Dispatcher.BeginInvoke(
+                new Action(() => _ = EndFormHydrationAndPrimeCountryAsync()),
+                DispatcherPriority.ApplicationIdle);
+        }
+
+        /// <summary>Finalizează hidratarea: primește orașele pe pasul 2 dacă e cazul, apoi ridică <see cref="_hydratingForm"/>.</summary>
+        private async Task EndFormHydrationAndPrimeCountryAsync()
+        {
+            try
+            {
+                if (_editingTrip != null)
+                    await PrimeCountryCitiesForStep2IfNeededAsync();
+            }
+            catch
+            {
+                // ignoră — destinația rămâne ca text liber
+            }
+            finally
+            {
+                _hydratingForm = false;
+            }
+        }
+
+        /// <summary>La editare, încarcă orașele țării când ești pe pasul 2, păstrând textul destinației din DB.</summary>
+        private async Task PrimeCountryCitiesForStep2IfNeededAsync()
+        {
+            if (currentStep != 2)
+                return;
+
+            var countryName = (CountryComboBox?.Text ?? "").Trim();
+            if (countryName.Length < 2)
+                return;
+
+            if (_selectedCountry != null &&
+                string.Equals(_selectedCountry.Name.Trim(), countryName, StringComparison.OrdinalIgnoreCase) &&
+                _countryCities.Count > 0)
+                return;
+
+            var results = await _facade.SearchCountriesAsync(countryName, 10);
+            var pick = results.FirstOrDefault(c =>
+                           string.Equals(c.Name, countryName, StringComparison.OrdinalIgnoreCase))
+                       ?? results.FirstOrDefault();
+            if (pick == null)
+                return;
+
+            await ApplySelectedCountryAsync(pick);
+        }
+
+        /// <summary>DB / fabrică folosesc uneori „Budget”/„Premium” ca TripType; wizardul UI are doar tipuri de sejur.</summary>
+        private static string MapStoredTripTypeToWizardUi(string storedTripType, string packageName)
+        {
+            var t = (storedTripType ?? "").Trim();
+            if (string.IsNullOrEmpty(t))
+                return InferTripTypeFromName(packageName);
+
+            foreach (var ui in new[] { "City Break", "Beach Holiday", "Adventure", "Cultural Tour" })
+            {
+                if (string.Equals(t, ui, StringComparison.OrdinalIgnoreCase))
+                    return ui;
+            }
+
+            if (string.Equals(t, "Budget", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t, "Standard", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t, "Premium", StringComparison.OrdinalIgnoreCase))
+            {
+                return InferTripTypeFromName(packageName);
+            }
+
+            return InferTripTypeFromName(string.IsNullOrWhiteSpace(packageName) ? t : packageName);
         }
 
         private static void SetComboBoxByText(ComboBox comboBox, string text)
@@ -2307,6 +2487,25 @@ namespace TravelAgency.WPF.Views
                 UpdateReviewPanel();
         }
 
+        private void HotelsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (HotelsListBox.SelectedItem is not HotelSearchOption hotel)
+                return;
+
+            var url = (hotel.ThumbnailUrl ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(url))
+                return;
+
+            try
+            {
+                ImagePreviewWindow.ShowForUrl(this, "Accommodation image", url);
+            }
+            catch
+            {
+                // non-fatal
+            }
+        }
+
         private void DestinationComboBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (_isLoading)
@@ -2411,6 +2610,9 @@ namespace TravelAgency.WPF.Views
                 if (_suppressCountrySearch)
                     return;
 
+                if (_hydratingForm)
+                    return;
+
                 if (_isLoading)
                     return;
 
@@ -2503,6 +2705,9 @@ namespace TravelAgency.WPF.Views
             if (_isLoading)
                 return;
 
+            if (_hydratingForm)
+                return;
+
             if (CountryComboBox.SelectedItem is not CountryOption country)
                 return;
 
@@ -2518,6 +2723,9 @@ namespace TravelAgency.WPF.Views
             CancellationToken token,
             bool allowShortAutoPick)
         {
+            if (_hydratingForm)
+                return;
+
             if (currentStep != 2)
                 return;
 
@@ -2580,6 +2788,8 @@ namespace TravelAgency.WPF.Views
 
             try
             {
+                var savedDestination = (DestinationComboBox.Text ?? "").Trim();
+
                 // RapidAPI GeoDB free tiers often cap "limit" to 10.
                 _countryCities = await _facade.GetCitiesByCountryCodeAsync(country.Code, 10);
 
@@ -2588,8 +2798,27 @@ namespace TravelAgency.WPF.Views
 
                 if (currentStep == 2)
                 {
-                    DestinationComboBox.SelectedItem = null;
-                    DestinationComboBox.Text = "";
+                    if (string.IsNullOrWhiteSpace(savedDestination))
+                    {
+                        DestinationComboBox.SelectedItem = null;
+                        DestinationComboBox.Text = "";
+                    }
+                    else
+                    {
+                        var match = _countryCities.FirstOrDefault(c =>
+                            string.Equals(c.City, savedDestination, StringComparison.OrdinalIgnoreCase));
+                        if (match != null)
+                        {
+                            DestinationComboBox.SelectedItem = match;
+                            DestinationComboBox.Text = match.City;
+                        }
+                        else
+                        {
+                            // Orașul din pachet poate lipsi din primele N rezultate API — păstrăm textul, nu îl ștergem.
+                            DestinationComboBox.SelectedItem = null;
+                            DestinationComboBox.Text = savedDestination;
+                        }
+                    }
                 }
             }
             catch (Exception ex)

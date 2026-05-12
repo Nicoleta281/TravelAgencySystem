@@ -13,6 +13,7 @@ using TravelAgency.Core.Data;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
+using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Patterns.ChainOfResponsibility;
 using TravelAgency.Core.Patterns.Iterator;
@@ -20,7 +21,9 @@ using TravelAgency.Core.Patterns.Observer;
 using TravelAgency.Core.Services;
 using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
+using TravelAgency.WPF.Services;
 using TravelAgency.WPF.Services.Navigation;
+using TravelAgency.WPF.Views.Common;
 
 namespace TravelAgency.WPF.ViewModels.AgentVM
 {
@@ -42,10 +45,26 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         private readonly AgentReportService _reportService = new();
         private Booking? _selectedBooking;
         private string _currentBookingFilter = "All";
+
+        /// <summary>Filtru activ pe pagina Rezervări (pentru highlight pe chip-uri).</summary>
+        public string ActiveBookingsFilter => _currentBookingFilter;
+
+        private void SetActiveBookingsFilter(string filter)
+        {
+            if (string.Equals(_currentBookingFilter, filter, StringComparison.Ordinal))
+                return;
+            _currentBookingFilter = filter;
+            OnPropertyChanged(nameof(ActiveBookingsFilter));
+        }
+
+        private readonly RelayCommand _approveBookingCommand;
+        private readonly RelayCommand _rejectBookingCommand;
         private readonly IUserRepository _userRepository;
         private readonly IBookingRepository _bookingRepository;
         private readonly IBookingApprovalHandler _bookingApprovalChain;
         private readonly INavigationService _navigation;
+        private readonly IUserMessageRepository _userMessages;
+        private int _inboxUnreadCount;
 
         public ObservableCollection<TripPackage> Trips { get; } = new();
         public ObservableCollection<Booking> PendingBookings { get; set; }
@@ -55,6 +74,10 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         // Dashboard data
         public ObservableCollection<Booking> RecentBookings { get; } = new();
         public ObservableCollection<TravelAgency.Core.Models.Users.User> RecentClients { get; } = new();
+
+        /// <summary>Numărul de clienți afișați în listă (pentru antet / badge).</summary>
+        public int RecentClientsCount => RecentClients.Count;
+
         public ObservableCollection<AgentNotificationItem> Notifications { get; } = new();
 
         // Dashboard "Recent bookings" table (tab-filtered)
@@ -84,13 +107,6 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             }
         }
 
-        public ObservableCollection<string> ReportTypes { get; } = new()
-{
-    "All Bookings",
-    "Pending Bookings",
-    "Confirmed Bookings",
-    "Rejected Bookings"
-};
         private ObservableCollection<Booking> _agentBookings = new();
         public ObservableCollection<Booking> AgentBookings
         {
@@ -98,14 +114,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             set => Set(ref _agentBookings, value);
         }
 
-        public ObservableCollection<string> ExportFormats { get; } = new()
-{
-    "PDF",
-    "CSV",
-    "TXT"
-};
-
-        private string _selectedReportType = "All Bookings";
+        private string _selectedReportType = "Toate rezervările";
         public string SelectedReportType
         {
             get => _selectedReportType;
@@ -208,8 +217,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand UpdateCommand { get;  }
         public ICommand DeleteCommand { get; }
 
-        public ICommand ApproveBookingCommand { get; set; }
-        public ICommand RejectBookingCommand { get; set; }
+        public ICommand ApproveBookingCommand => _approveBookingCommand;
+        public ICommand RejectBookingCommand => _rejectBookingCommand;
         public ICommand RefreshPendingBookingsCommand { get; set; }
         public ICommand LogoutCommand { get; }
 
@@ -224,6 +233,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         public ICommand ShowDashboardCommand { get; }
         public ICommand ShowRejectedBookingsCommand { get; }
         public ICommand ShowClientsCommand { get; }
+        public ICommand OpenClientMessageCommand { get; }
+        public ICommand SetReportTypeCommand { get; }
+        public ICommand SetExportFormatCommand { get; }
+
+        public int InboxUnreadCount
+        {
+            get => _inboxUnreadCount;
+            private set => Set(ref _inboxUnreadCount, value);
+        }
 
         private string _navSection = "Dashboard";
         public string NavSection
@@ -238,6 +256,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             TripCreationService tripCreationService,
             IBookingRepository bookingRepository,
             IUserRepository userRepository,
+            IUserMessageRepository userMessages,
             BookingNotificationService notificationService,
             BookingService bookingService,
             BookingAccessService bookingAccessService,
@@ -248,6 +267,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             _tripCreationService = tripCreationService ?? throw new ArgumentNullException(nameof(tripCreationService));
             _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _userMessages = userMessages ?? throw new ArgumentNullException(nameof(userMessages));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _realBookingService = bookingService ?? throw new ArgumentNullException(nameof(bookingService));
             _bookingApprovalChain = (approvalChainFactory ?? throw new ArgumentNullException(nameof(approvalChainFactory))).Create();
@@ -267,6 +287,17 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             GenerateReportCommand = new RelayCommand(GenerateReport);
             LogoutCommand = new RelayCommand(Logout);
             ShowClientsCommand = new RelayCommand(ShowClients);
+            OpenClientMessageCommand = new RelayCommand<User?>(OpenClientMessage, u => u != null && !string.IsNullOrWhiteSpace(u.Username));
+            SetReportTypeCommand = new RelayCommand<string>(s =>
+            {
+                if (!string.IsNullOrWhiteSpace(s))
+                    SelectedReportType = s;
+            });
+            SetExportFormatCommand = new RelayCommand<string>(s =>
+            {
+                if (!string.IsNullOrWhiteSpace(s))
+                    SelectedExportFormat = s;
+            });
 
             IsDashboardVisible = true;
             IsPackagesVisible = false;
@@ -280,6 +311,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             ClientsVisibility = Visibility.Collapsed;
 
             Trips.CollectionChanged += (_, __) => RefreshStats();
+            RecentClients.CollectionChanged += (_, __) => OnPropertyChanged(nameof(RecentClientsCount));
 
             var currentUser = SessionManager.Instance.CurrentSession.CurrentUser
                 ?? throw new InvalidOperationException("User not authenticated.");
@@ -292,8 +324,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             PendingBookings = new ObservableCollection<Booking>();
 
-            ApproveBookingCommand = new RelayCommand(ApproveSelectedBooking);
-            RejectBookingCommand = new RelayCommand(RejectSelectedBooking);
+            _approveBookingCommand = new RelayCommand(ApproveSelectedBooking, () => CanApproveOrRejectBooking());
+            _rejectBookingCommand = new RelayCommand(RejectSelectedBooking, () => CanApproveOrRejectBooking());
 
             RefreshPendingBookingsCommand = new RelayCommand(LoadPendingRequests);
 
@@ -315,6 +347,45 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             LoadRecentClients();
             RefreshRecentBookings();
             RefreshDashboardBookings();
+            RefreshInboxUnread();
+        }
+
+        private void RefreshInboxUnread()
+        {
+            var me = SessionManager.Instance.CurrentSession.CurrentUser?.Username;
+            if (string.IsNullOrWhiteSpace(me))
+            {
+                InboxUnreadCount = 0;
+                return;
+            }
+
+            try
+            {
+                InboxUnreadCount = _userMessages.GetUnreadCount(me);
+            }
+            catch
+            {
+                InboxUnreadCount = 0;
+            }
+        }
+
+        private void OpenClientMessage(User? client)
+        {
+            if (client == null || string.IsNullOrWhiteSpace(client.Username))
+                return;
+
+            var me = SessionManager.Instance.CurrentSession.CurrentUser;
+            if (me == null || string.IsNullOrWhiteSpace(me.Username))
+                return;
+
+            var win = new UserConversationWindow(
+                _userMessages,
+                me.Username,
+                client.Username,
+                $"Mesaje — {client.Username}");
+            win.SetOwnerSafe();
+            win.ShowDialog();
+            RefreshInboxUnread();
         }
         private void LoadTrips()
         {
@@ -773,10 +844,28 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 result.Add(iterator.Next());
             }
 
+            HydrateTripPackagesForBookings(result);
             AgentBookings = new ObservableCollection<Booking>(result);
         }
 
-  
+        /// <summary>
+        /// Din DB, rezervarea vine cu un TripPackage „stub” (Id + Name). Pentru coperte în UI,
+        /// încărcăm pachetul complet (CoverImageUrl, destinație etc.).
+        /// </summary>
+        private void HydrateTripPackagesForBookings(IEnumerable<Booking> bookings)
+        {
+            foreach (var booking in bookings)
+            {
+                var id = booking.TripPackage?.Id ?? 0;
+                if (id <= 0)
+                    continue;
+
+                var full = _repo.GetById(id);
+                if (full != null)
+                    booking.TripPackage = full;
+            }
+        }
+
         private void LoadBookingsFromIterator(IIterator<Booking> iterator)
         {
             var result = new List<Booking>();
@@ -786,11 +875,12 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 result.Add(iterator.Next());
             }
 
+            HydrateTripPackagesForBookings(result);
             AgentBookings = new ObservableCollection<Booking>(result);
         }
         private void LoadAllBookings()
         {
-            _currentBookingFilter = "All";
+            SetActiveBookingsFilter("All");
 
             var bookings = _bookingRepository.GetAll().ToList();
             var bookingCollection = new BookingCollection(bookings);
@@ -801,7 +891,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
         private void LoadPendingBookings()
         {
-            _currentBookingFilter = "Pending";
+            SetActiveBookingsFilter("Pending");
 
             var bookings = _bookingRepository.GetAll().ToList();
             var bookingCollection = new BookingCollection(bookings);
@@ -812,7 +902,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
         private void LoadConfirmedBookings()
         {
-            _currentBookingFilter = "Confirmed";
+            SetActiveBookingsFilter("Confirmed");
 
             var bookings = _bookingRepository.GetAll().ToList();
             var bookingCollection = new BookingCollection(bookings);
@@ -823,7 +913,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
         private void LoadRejectedBookings()
         {
-            _currentBookingFilter = "Rejected";
+            SetActiveBookingsFilter("Rejected");
 
             var bookings = _bookingRepository.GetAll().ToList();
             var bookingCollection = new BookingCollection(bookings);
@@ -998,15 +1088,22 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 {
                     _selectedBooking = value;
                     OnPropertyChanged(nameof(SelectedBooking));
+                    _approveBookingCommand.RaiseCanExecuteChanged();
+                    _rejectBookingCommand.RaiseCanExecuteChanged();
                 }
             }
         }
+
+        private bool CanApproveOrRejectBooking() =>
+            SelectedBooking != null &&
+            string.Equals(SelectedBooking.StatusName, "Pending", StringComparison.OrdinalIgnoreCase);
 
         private void LoadPendingRequests()
         {
             PendingBookings.Clear();
 
             var bookings = _bookingService.GetPendingBookings();
+            HydrateTripPackagesForBookings(bookings);
 
             foreach (var booking in bookings)
             {
@@ -1018,7 +1115,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             AllBookings.Clear();
 
-            var allBookings = _bookingRepository.GetAll();
+            var allBookings = _bookingRepository.GetAll().ToList();
+            HydrateTripPackagesForBookings(allBookings);
 
             foreach (var booking in allBookings)
             {
@@ -1032,8 +1130,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             if (SelectedBooking == null)
             {
-                MessageBox.Show("Please select a booking request first.",
-                                "Approve Booking",
+                MessageBox.Show("Selectează mai întâi o cerere de rezervare din listă.",
+                                "Aprobare rezervare",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                 return;
@@ -1045,7 +1143,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             if (!approvalResult.IsApproved)
             {
                 MessageBox.Show(approvalResult.Message,
-                                "Approval Blocked",
+                                "Aprobare blocată",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                 return;
@@ -1061,15 +1159,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 _realBookingService.ConfirmBooking(bookingToApprove);
                 SelectedBooking = null;
 
-                MessageBox.Show("Booking request approved successfully.",
-                                "Approve Booking",
+                MessageBox.Show("Rezervarea a fost aprobată cu succes.",
+                                "Aprobare rezervare",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message,
-                                "State Error",
+                                "Eroare stare",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
             }
@@ -1079,8 +1177,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             if (SelectedBooking == null)
             {
-                MessageBox.Show("Please select a booking request first.",
-                                "Reject Booking",
+                MessageBox.Show("Selectează mai întâi o cerere de rezervare din listă.",
+                                "Respingere rezervare",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                 return;
@@ -1096,15 +1194,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 _realBookingService.RejectBooking(bookingToReject);
                 SelectedBooking = null;
 
-                MessageBox.Show("Booking request rejected successfully.",
-                                "Reject Booking",
+                MessageBox.Show("Rezervarea a fost respinsă.",
+                                "Respingere rezervare",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message,
-                                "State Error",
+                                "Eroare stare",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
             }
@@ -1169,6 +1267,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             IsClientsVisible = false;
 
             NavSection = "Reports";
+            RefreshReportPreview();
         }
 
         private void ShowPackages()
@@ -1224,6 +1323,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             NavSection = "Clients";
             LoadRecentClients();
+            RefreshInboxUnread();
         }
 
         private void GenerateReport()
@@ -1239,16 +1339,16 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     "Agent");
 
                 MessageBox.Show(
-                    $"Report generated:\n{outputPath}",
-                    "Success",
+                    $"Raportul a fost generat:\n{outputPath}",
+                    "Succes",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Error:\n{ex.Message}",
-                    "Error",
+                    $"Eroare:\n{ex.Message}",
+                    "Eroare",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
@@ -1261,13 +1361,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             var filtered = SelectedReportType switch
             {
-                "Pending Bookings" => AllBookings
+                "În așteptare" or "Pending Bookings" => AllBookings
                     .Where(b => string.Equals(b.Status?.Name, "Pending", StringComparison.OrdinalIgnoreCase)),
 
-                "Confirmed Bookings" => AllBookings
+                "Confirmate" or "Confirmed Bookings" => AllBookings
                     .Where(b => string.Equals(b.Status?.Name, "Confirmed", StringComparison.OrdinalIgnoreCase)),
 
-                "Rejected Bookings" => AllBookings
+                "Respinse" or "Rejected Bookings" => AllBookings
                     .Where(b => string.Equals(b.Status?.Name, "Rejected", StringComparison.OrdinalIgnoreCase)),
 
                 _ => AllBookings
@@ -1298,6 +1398,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     AllBookings.Remove(existing);
                 }
 
+                HydrateTripPackagesForBookings(new[] { bookingEvent.Booking });
                 AllBookings.Insert(0, bookingEvent.Booking);
 
                 AddNotificationForBookingEvent(bookingEvent);
@@ -1321,6 +1422,9 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                             LoadAllBookings();
                             break;
                     }
+
+                    _approveBookingCommand.RaiseCanExecuteChanged();
+                    _rejectBookingCommand.RaiseCanExecuteChanged();
                 }
             });
         }

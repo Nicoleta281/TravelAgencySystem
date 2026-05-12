@@ -1,11 +1,15 @@
 using FluentValidation;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Net.Http;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using TravelAgency.Core.Data.Repositories;
 using TravelAgency.Core.Models;
 using TravelAgency.Core.Models.Booking;
+using TravelAgency.Core.Models.Locations;
 using TravelAgency.Core.Models.TripPkg.Package;
 using TravelAgency.Core.Models.Users;
 using TravelAgency.Core.Patterns.Decorator;
@@ -15,7 +19,9 @@ using TravelAgency.Core.Services;
 using TravelAgency.Core.Validators;
 using TravelAgency.WPF.Messaging.Messages;
 using TravelAgency.WPF.Commands;
+using TravelAgency.WPF.Services;
 using TravelAgency.WPF.Views;
+using TravelAgency.WPF.Views.Common;
 
 namespace TravelAgency.WPF.ViewModels.ClientVM
 {
@@ -30,6 +36,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         private readonly IBookingAccessService _bookingService;
         private readonly string _currentClientUsername;
         private readonly IUserRepository _userRepository;
+        private readonly IUserMessageRepository _userMessages;
         private readonly BookingNotificationService _notificationService;
         private readonly IBookingRepository _bookingRepository;
         private readonly ITripPackageRepository _tripPackageRepository;
@@ -66,8 +73,29 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
         public ObservableCollection<Booking> MyBookings { get; set; }
 
+        public ObservableCollection<string> DestinationImageUrls { get; } = new();
+        public ObservableCollection<string> HotelImageUrls { get; } = new();
+
+        private const string ApiBaseUrl = "http://localhost:5280";
+        private readonly HttpClient _apiHttp = new() { Timeout = TimeSpan.FromSeconds(25) };
+
         public ICommand ConfirmBookingCommand { get; set; }
         public ICommand LogoutCommand { get; }
+        public ICommand OpenAgencyMessagesCommand { get; }
+
+        private int _agencyInboxUnread;
+        public int AgencyInboxUnreadCount
+        {
+            get => _agencyInboxUnread;
+            private set
+            {
+                if (_agencyInboxUnread != value)
+                {
+                    _agencyInboxUnread = value;
+                    OnPropertyChanged(nameof(AgencyInboxUnreadCount));
+                }
+            }
+        }
 
         public string SearchText
         {
@@ -126,6 +154,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             IBookingRepository bookingRepository,
             ITripPackageRepository tripPackageRepository,
             IUserRepository userRepository,
+            IUserMessageRepository userMessages,
             BookingNotificationService notificationService,
             BookingAccessService bookingAccessService)
         {
@@ -135,6 +164,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
             _tripPackageRepository = tripPackageRepository ?? throw new ArgumentNullException(nameof(tripPackageRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _userMessages = userMessages ?? throw new ArgumentNullException(nameof(userMessages));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 
             _bookingService = new BookingAccessProxy(
@@ -163,10 +193,43 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             ShowBookingsCommand = new RelayCommand(ShowBookings);
             ShowPackagesCommand = new RelayCommand(ShowPackages);
             ConfirmBookingCommand = new RelayCommand(ConfirmBooking);
-            LogoutCommand = new RelayCommand(Logout);
+            OpenAgencyMessagesCommand = new RelayCommand(OpenAgencyMessages);
 
             LoadFromDatabase();
             LoadMyBookings();
+            RefreshAgencyInboxUnread();
+        }
+
+        private string ResolveDefaultAgentUsername()
+        {
+            var agent = _userRepository.GetAll()
+                .FirstOrDefault(u => string.Equals(u.Role?.Name, "Agent", StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrWhiteSpace(agent?.Username) ? "agent1" : agent.Username;
+        }
+
+        private void RefreshAgencyInboxUnread()
+        {
+            try
+            {
+                AgencyInboxUnreadCount = _userMessages.GetUnreadCount(_currentClientUsername);
+            }
+            catch
+            {
+                AgencyInboxUnreadCount = 0;
+            }
+        }
+
+        private void OpenAgencyMessages()
+        {
+            var agentUsername = ResolveDefaultAgentUsername();
+            var win = new UserConversationWindow(
+                _userMessages,
+                _currentClientUsername,
+                agentUsername,
+                $"Mesaje — agenție ({agentUsername})");
+            win.SetOwnerSafe();
+            win.ShowDialog();
+            RefreshAgencyInboxUnread();
         }
         private void ShowBookings()
         {
@@ -239,6 +302,97 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             }
 
             RecalculateTotalPrice();
+
+            // Async: load destination + hotel images for details panel.
+            _ = LoadDetailsImagesAsync(SelectedPackage);
+        }
+
+        private async Task LoadDetailsImagesAsync(TripPackage pkg)
+        {
+            try
+            {
+                var city = (pkg.Destination ?? "").Trim();
+                var country = (pkg.Country ?? "").Trim();
+
+                if (city.Length == 0)
+                    return;
+
+                // Destination images
+                var imgUrl =
+                    $"{ApiBaseUrl}/api/destinations/images" +
+                    $"?city={Uri.EscapeDataString(city)}" +
+                    (country.Length == 0 ? "" : $"&country={Uri.EscapeDataString(country)}") +
+                    $"&limit=6";
+
+                using var imgResp = await _apiHttp.GetAsync(imgUrl);
+                if (imgResp.IsSuccessStatusCode)
+                {
+                    var json = await imgResp.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("images", out var images) &&
+                        images.ValueKind == JsonValueKind.Array)
+                    {
+                        var list = images.EnumerateArray()
+                            .Select(x =>
+                            {
+                                var thumb = (x.TryGetProperty("thumbUrl", out var t) ? (t.GetString() ?? "") : "").Trim();
+                                if (thumb.Length > 0) return thumb;
+                                return (x.TryGetProperty("url", out var u) ? (u.GetString() ?? "") : "").Trim();
+                            })
+                            .Where(s => s.Length > 0)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .Take(6)
+                            .ToList();
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            DestinationImageUrls.Clear();
+                            foreach (var u in list) DestinationImageUrls.Add(u);
+                        });
+                    }
+                }
+
+                // Hotel thumbnails (best effort): use package season as dates.
+                var checkIn = pkg.Season?.StartDate.Date ?? DateTime.Today.AddDays(14);
+                var checkOut = pkg.Season?.EndDate.Date ?? checkIn.AddDays(5);
+                if (checkOut <= checkIn) checkOut = checkIn.AddDays(3);
+
+                var hotelsUrl =
+                    $"{ApiBaseUrl}/api/destinations/hotels" +
+                    $"?city={Uri.EscapeDataString(city)}" +
+                    (country.Length == 0 ? "" : $"&country={Uri.EscapeDataString(country)}") +
+                    $"&checkIn={Uri.EscapeDataString(checkIn.ToString("yyyy-MM-dd"))}" +
+                    $"&checkOut={Uri.EscapeDataString(checkOut.ToString("yyyy-MM-dd"))}" +
+                    $"&adults=2&limit=6";
+
+                using var hResp = await _apiHttp.GetAsync(hotelsUrl);
+                if (hResp.IsSuccessStatusCode)
+                {
+                    var json = await hResp.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("hotels", out var hotels) &&
+                        hotels.ValueKind == JsonValueKind.Array)
+                    {
+                        var list = hotels.EnumerateArray()
+                            .Select(x =>
+                                (x.TryGetProperty("thumbnailUrl", out var t) ? (t.GetString() ?? "") : "").Trim())
+                            .Where(s => s.Length > 0)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .Take(6)
+                            .ToList();
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            HotelImageUrls.Clear();
+                            foreach (var u in list) HotelImageUrls.Add(u);
+                        });
+                    }
+                }
+            }
+            catch
+            {
+                // ignore (API may be down)
+            }
         }
 
         private void RecalculateTotalPrice()
@@ -357,9 +511,24 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         {
             MyBookings.Clear();
             var bookings = _bookingService.GetBookingsForCurrentUser();
+            HydrateTripPackagesForBookings(bookings);
             foreach (var booking in bookings)
             {
                 MyBookings.Add(booking);
+            }
+        }
+
+        private void HydrateTripPackagesForBookings(IEnumerable<Booking> bookings)
+        {
+            foreach (var booking in bookings)
+            {
+                var id = booking.TripPackage?.Id ?? 0;
+                if (id <= 0)
+                    continue;
+
+                var full = _tripPackageRepository.GetById(id);
+                if (full != null)
+                    booking.TripPackage = full;
             }
         }
         public void Cleanup()
@@ -384,6 +553,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     MyBookings.Remove(existing);
                 }
 
+                HydrateTripPackagesForBookings(new[] { bookingEvent.Booking });
                 // adăugăm versiunea nouă (cu status updated)
                 MyBookings.Insert(0, bookingEvent.Booking);
             });

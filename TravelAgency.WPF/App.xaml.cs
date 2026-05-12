@@ -241,6 +241,7 @@ namespace TravelAgency.WPF
             services.AddTransient<IUserRepository, EfUserRepository>();
             services.AddTransient<ITripPackageRepository, EfTripPackageRepository>();
             services.AddTransient<IBookingRepository, EfBookingRepository>();
+            services.AddTransient<IUserMessageRepository, EfUserMessageRepository>();
             services.AddTransient<IAdminAnalyticsSnapshotRepository>(_ =>
                 new EfAdminAnalyticsSnapshotRepository(TravelAgencyDbContextFactory.Create()));
             services.AddTransient<AuthenticationService>();

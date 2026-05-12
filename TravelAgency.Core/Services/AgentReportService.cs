@@ -40,10 +40,10 @@ namespace TravelAgency.Core.Services
         {
             return reportType switch
             {
-                "All Bookings" => new AllBookingsReport(exporter),
-                "Pending Bookings" => new PendingBookingsReport(exporter),
-                "Confirmed Bookings" => new ConfirmedBookingsReport(exporter),
-                "Rejected Bookings" => new RejectedBookingsReport(exporter),
+                "Toate rezervările" or "All Bookings" => new AllBookingsReport(exporter),
+                "În așteptare" or "Pending Bookings" => new PendingBookingsReport(exporter),
+                "Confirmate" or "Confirmed Bookings" => new ConfirmedBookingsReport(exporter),
+                "Respinse" or "Rejected Bookings" => new RejectedBookingsReport(exporter),
                 _ => throw new ArgumentException($"Unsupported report type: {reportType}")
             };
         }

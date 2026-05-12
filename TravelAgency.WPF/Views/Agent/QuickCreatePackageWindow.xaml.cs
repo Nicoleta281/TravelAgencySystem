@@ -430,16 +430,38 @@ namespace TravelAgency.WPF.Views.Agent
             try
             {
                 // RapidAPI GeoDB free tiers often cap "limit" to 10.
+                var savedDestination = (DestinationComboBox.Text ?? string.Empty).Trim();
+
                 var cities = await _facade.GetCitiesByCountryCodeAsync(country.Code, 10);
                 _countryCityCache = cities.ToArray();
 
                 DestinationComboBox.ItemsSource = _countryCityCache;
                 DestinationComboBox.IsDropDownOpen = _countryCityCache.Length > 0;
 
-                // Reset destination selection (country changed)
                 _selectedLocation = null;
                 DestinationComboBox.SelectedItem = null;
-                DestinationComboBox.Text = "";
+
+                if (string.IsNullOrWhiteSpace(savedDestination))
+                {
+                    DestinationComboBox.Text = string.Empty;
+                }
+                else
+                {
+                    var match = _countryCityCache.FirstOrDefault(c =>
+                        string.Equals(c.City, savedDestination, StringComparison.OrdinalIgnoreCase));
+
+                    if (match != null)
+                    {
+                        DestinationComboBox.SelectedItem = match;
+                        DestinationComboBox.Text = match.City;
+                        _selectedLocation = match;
+                    }
+                    else
+                    {
+                        // city text may not be in the first N API results – keep the free text instead of clearing it
+                        DestinationComboBox.Text = savedDestination;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -471,8 +493,8 @@ namespace TravelAgency.WPF.Views.Agent
 
             int seats = ParseInt(SeatsTextBox.Text, "Available seats");
 
-            string templateType = GetComboBoxText(TemplateTypeComboBox);
-            string tier = GetComboBoxText(TierComboBox);
+            string templateType = GetComboBoxText(TemplateTypeComboBox); // e.g. "City Break"
+            string tier = GetComboBoxText(TierComboBox);                 // e.g. "Premium"
             string transport = GetComboBoxText(TransportComboBox);
 
             double basePrice = ParseDouble(BasePriceTextBox.Text, "Base price");
@@ -484,7 +506,9 @@ namespace TravelAgency.WPF.Views.Agent
             return new TripRequest
             {
                 PackageName = packageName,
-                TripType = tier,
+                // Align with full editor: TripType = template (City Break / Beach Holiday),
+                // Category = Tier (Budget / Premium).
+                TripType = templateType,
                 Category = tier,
                 ShortDescription = $"Draft created from template: {templateType}",
                 Destination = destination,
@@ -520,12 +544,15 @@ namespace TravelAgency.WPF.Views.Agent
 
             TrySyncSelectedLocationFromText(destination);
 
+            var hasDates =
+                StartDatePicker.SelectedDate.HasValue &&
+                EndDatePicker.SelectedDate.HasValue;
+
             CreateAndEditButton.IsEnabled =
                 _selectedLocation != null &&
                 destination.Length >= 2 &&
                 country.Length >= 2 &&
-                StartDatePicker.SelectedDate.HasValue &&
-                EndDatePicker.SelectedDate.HasValue;
+                hasDates;
 
             if (DestinationHintText != null)
                 DestinationHintText.Visibility = _selectedLocation == null ? Visibility.Visible : Visibility.Collapsed;
@@ -545,10 +572,28 @@ namespace TravelAgency.WPF.Views.Agent
                 var context = new PricingContext(strategy);
                 var final = context.CalculateFinalPrice(basePrice, 0);
                 EstimatedPriceText.Text = $"€ {final:0.00}";
+
+                var template = GetComboBoxText(TemplateTypeComboBox);
+                var transport = GetComboBoxText(TransportComboBox);
+                var start = StartDatePicker.SelectedDate;
+                var end = EndDatePicker.SelectedDate;
+
+                if (CreateAndEditButton.IsEnabled && start.HasValue && end.HasValue)
+                {
+                    SummaryText.Text =
+                        $"{template} - {destination} • " +
+                        $"{start.Value:dd.MM.yyyy} – {end.Value:dd.MM.yyyy} • " +
+                        transport;
+                }
+                else
+                {
+                    SummaryText.Text = string.Empty;
+                }
             }
             catch
             {
                 EstimatedPriceText.Text = "€ -";
+                SummaryText.Text = string.Empty;
             }
         }
 

@@ -4,13 +4,177 @@
         Title="Quick Create Package"
         Height="680"
         Width="520"
-        WindowStartupLocation="CenterOwner"
-        Background="#F6F7FB">
+        WindowStartupLocation="CenterOwner">
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#E8F4F7" Offset="0"/>
+            <GradientStop Color="#F0F4F8" Offset="0.45"/>
+            <GradientStop Color="#F8FAFC" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
+
+    <Window.Resources>
+        <DropShadowEffect x:Key="CreatePkgGlassShadow"
+                          BlurRadius="28"
+                          ShadowDepth="1"
+                          Direction="270"
+                          Opacity="0.07"
+                          Color="#0F172A"/>
+
+        <Style x:Key="CreatePkgFieldTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CaretBrush" Value="#0F766E"/>
+            <Setter Property="SelectionBrush" Value="#99F6E4"/>
+        </Style>
+
+        <Style x:Key="CreatePkgFieldCombo" TargetType="ComboBox">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- ScrollBar discret, aliniat cu Create Package (fără gradient albastru implicit) -->
+        <ControlTemplate x:Key="QuickCreateScrollBarVertical" TargetType="ScrollBar">
+            <Grid x:Name="Root" Width="10" SnapsToDevicePixels="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="0"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="0"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="1"
+                        Width="5"
+                        HorizontalAlignment="Center"
+                        Margin="0,6"
+                        CornerRadius="3"
+                        Background="#E2E8F0"/>
+                <Track x:Name="PART_Track"
+                       Grid.Row="1"
+                       IsDirectionReversed="True"
+                       Focusable="False">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                      Opacity="0"
+                                      Height="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                      Opacity="0"
+                                      Height="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb>
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border x:Name="T"
+                                            Width="6"
+                                            MinHeight="28"
+                                            CornerRadius="3"
+                                            Margin="2,0"
+                                            Background="#94A3B8"/>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="T" Property="Background" Value="#64748B"/>
+                                        </Trigger>
+                                        <Trigger Property="IsDragging" Value="True">
+                                            <Setter TargetName="T" Property="Background" Value="#475569"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="QuickCreateScrollBarHorizontal" TargetType="ScrollBar">
+            <Grid Height="10" SnapsToDevicePixels="True">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="0"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="1"
+                        Height="5"
+                        VerticalAlignment="Center"
+                        Margin="6,0"
+                        CornerRadius="3"
+                        Background="#E2E8F0"/>
+                <Track x:Name="PART_Track"
+                       Grid.Column="1"
+                       IsDirectionReversed="False"
+                       Focusable="False">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}"
+                                      Opacity="0"
+                                      Width="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}"
+                                      Opacity="0"
+                                      Width="0"
+                                      IsTabStop="False"
+                                      Focusable="False"/>
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb>
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border x:Name="Th"
+                                            Height="6"
+                                            MinWidth="36"
+                                            CornerRadius="3"
+                                            Margin="0,2"
+                                            Background="#94A3B8"/>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Th" Property="Background" Value="#64748B"/>
+                                        </Trigger>
+                                        <Trigger Property="IsDragging" Value="True">
+                                            <Setter TargetName="Th" Property="Background" Value="#475569"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template" Value="{StaticResource QuickCreateScrollBarVertical}"/>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="MinWidth" Value="0"/>
+                    <Setter Property="Height" Value="10"/>
+                    <Setter Property="MinHeight" Value="10"/>
+                    <Setter Property="Template" Value="{StaticResource QuickCreateScrollBarHorizontal}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
 
     <Grid Margin="20">
-        <Border Background="White"
-                CornerRadius="16"
-                Padding="20">
+        <Border Background="#FDFEFE"
+                CornerRadius="20"
+                Padding="26,24"
+                BorderBrush="#D8E8EC"
+                BorderThickness="1"
+                Effect="{StaticResource CreatePkgGlassShadow}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -38,6 +202,7 @@
                         <ComboBox x:Name="CountryComboBox"
                                   Height="40"
                                   Margin="0,6,0,12"
+                                  Style="{StaticResource CreatePkgFieldCombo}"
                                   Padding="12,0"
                                   IsEditable="True"
                                   IsTextSearchEnabled="False"
@@ -50,6 +215,7 @@
                         <ComboBox x:Name="DestinationComboBox"
                                   Height="40"
                                   Margin="0,6,0,12"
+                                  Style="{StaticResource CreatePkgFieldCombo}"
                                   Padding="12,0"
                                   IsEditable="True"
                                   IsTextSearchEnabled="False"
@@ -99,6 +265,7 @@
                         <TextBox x:Name="SeatsTextBox"
                                  Height="40"
                                  Margin="0,6,0,18"
+                                 Style="{StaticResource CreatePkgFieldTextBox}"
                                  Padding="12,0"
                                  Text="20"
                                  TextChanged="AnyInputChanged"/>
@@ -108,7 +275,7 @@
                         <TextBlock Text="Template" FontSize="15" FontWeight="SemiBold" Foreground="#1F2937" Margin="0,0,0,10"/>
 
                         <TextBlock Text="Template type" Foreground="#374151" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="TemplateTypeComboBox" Height="40" Margin="0,6,0,12">
+                        <ComboBox x:Name="TemplateTypeComboBox" Height="40" Margin="0,6,0,12" Style="{StaticResource CreatePkgFieldCombo}">
                             <ComboBoxItem Content="City Break" IsSelected="True"/>
                             <ComboBoxItem Content="Beach Holiday"/>
                             <ComboBoxItem Content="Adventure"/>
@@ -116,13 +283,13 @@
                         </ComboBox>
 
                         <TextBlock Text="Tier" Foreground="#374151" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="TierComboBox" Height="40" Margin="0,6,0,12">
+                        <ComboBox x:Name="TierComboBox" Height="40" Margin="0,6,0,12" Style="{StaticResource CreatePkgFieldCombo}">
                             <ComboBoxItem Content="Budget"/>
                             <ComboBoxItem Content="Premium" IsSelected="True"/>
                         </ComboBox>
 
                         <TextBlock Text="Transport" Foreground="#374151" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="TransportComboBox" Height="40" Margin="0,6,0,12">
+                        <ComboBox x:Name="TransportComboBox" Height="40" Margin="0,6,0,12" Style="{StaticResource CreatePkgFieldCombo}">
                             <ComboBoxItem Content="Plane" IsSelected="True"/>
                             <ComboBoxItem Content="Train"/>
                             <ComboBoxItem Content="Bus"/>
@@ -130,7 +297,7 @@
                         </ComboBox>
 
                         <TextBlock Text="Accommodation name (optional)" Foreground="#374151" FontWeight="SemiBold"/>
-                        <TextBox x:Name="AccommodationNameTextBox" Height="40" Margin="0,6,0,18" Padding="12,0"/>
+                        <TextBox x:Name="AccommodationNameTextBox" Height="40" Margin="0,6,0,18" Padding="12,0" Style="{StaticResource CreatePkgFieldTextBox}"/>
 
                         <Separator Margin="0,0,0,18"/>
 
@@ -140,6 +307,7 @@
                         <TextBox x:Name="BasePriceTextBox"
                                  Height="40"
                                  Margin="0,6,0,12"
+                                 Style="{StaticResource CreatePkgFieldTextBox}"
                                  Padding="12,0"
                                  Text="500"
                                  TextChanged="AnyInputChanged"/>
@@ -155,6 +323,7 @@
                                 <TextBox x:Name="DiscountTextBox"
                                          Height="40"
                                          Margin="0,6,0,0"
+                                         Style="{StaticResource CreatePkgFieldTextBox}"
                                          Padding="12,0"
                                          Text="0"
                                          TextChanged="AnyInputChanged"/>
@@ -164,6 +333,7 @@
                                 <TextBox x:Name="VatTextBox"
                                          Height="40"
                                          Margin="0,6,0,0"
+                                         Style="{StaticResource CreatePkgFieldTextBox}"
                                          Padding="12,0"
                                          Text="0"
                                          TextChanged="AnyInputChanged"/>
@@ -174,20 +344,27 @@
                                 CornerRadius="12"
                                 Padding="12"
                                 Margin="0,16,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Estimated final price"
-                                           Foreground="#374151"
-                                           FontWeight="SemiBold"/>
-                                <TextBlock Grid.Column="1"
-                                           x:Name="EstimatedPriceText"
-                                           Text="€ -"
-                                           Foreground="#1F2937"
-                                           FontWeight="Bold"/>
-                            </Grid>
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Estimated final price"
+                                               Foreground="#374151"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1"
+                                               x:Name="EstimatedPriceText"
+                                               Text="€ -"
+                                               Foreground="#1F2937"
+                                               FontWeight="Bold"/>
+                                </Grid>
+                                <TextBlock x:Name="SummaryText"
+                                           Margin="0,6,0,0"
+                                           FontSize="12"
+                                           Foreground="#4B5563"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -200,22 +377,33 @@
                     </Grid.ColumnDefinitions>
 
                     <Button Content="Cancel"
-                            Height="42"
-                            Background="#F3F4F6"
-                            Foreground="#1F2937"
-                            BorderBrush="#D1D5DB"
+                            Height="44"
+                            Padding="18,0"
+                            MinWidth="140"
+                            Background="#E2E8F0"
+                            Foreground="#64748B"
+                            BorderBrush="#CBD5E1"
+                            BorderThickness="1"
                             FontWeight="SemiBold"
                             Click="Cancel_Click"/>
 
                     <Button Grid.Column="2"
                             x:Name="CreateAndEditButton"
                             Content="Create"
-                            Height="42"
-                            Background="#2F80ED"
+                            Height="44"
+                            Padding="22,0"
+                            MinWidth="150"
                             Foreground="White"
-                            BorderBrush="Transparent"
                             FontWeight="SemiBold"
-                            Click="CreateAndEdit_Click"/>
+                            BorderThickness="0"
+                            Click="CreateAndEdit_Click">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#2B8CA3" Offset="0"/>
+                                <GradientStop Color="#1F5E6B" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Button.Background>
+                    </Button>
                 </Grid>
             </Grid>
         </Border>
