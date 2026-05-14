@@ -366,3 +366,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local class-diagram notes (UML / rapport) — not tracked
+**/*class-diagram.md
