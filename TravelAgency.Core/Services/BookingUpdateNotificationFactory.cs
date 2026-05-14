@@ -5,7 +5,7 @@ using TravelAgency.Core.Patterns.Observer;
 
 namespace TravelAgency.Core.Services
 {
-    /// <summary>Creează înregistrări de notificare pentru client din evenimente de schimbare status (SRP: separat de UI).</summary>
+    /// <summary>Builds client booking notifications from status-change events (SRP: separate from UI).</summary>
     public static class BookingUpdateNotificationFactory
     {
         public static BookingUpdateNotification? TryCreate(BookingStatusChangedEvent e)
@@ -20,11 +20,11 @@ namespace TravelAgency.Core.Services
 
             var trip = e.Booking.TripPackage?.Name?.Trim();
             if (string.IsNullOrWhiteSpace(trip))
-                trip = "Pachet";
+                trip = "Package";
 
-            var title = "Actualizare rezervare";
+            var title = "Booking update";
             var detail =
-                $"#{e.Booking.Id} „{trip}”: {BookingStatusDisplay.ToRomanian(oldS)} → {BookingStatusDisplay.ToRomanian(newS)}";
+                $"#{e.Booking.Id} \"{trip}\": {BookingStatusDisplay.ToEnglish(oldS)} → {BookingStatusDisplay.ToEnglish(newS)}";
 
             return new BookingUpdateNotification
             {

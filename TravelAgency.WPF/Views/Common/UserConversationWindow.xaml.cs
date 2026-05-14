@@ -45,7 +45,7 @@ namespace TravelAgency.WPF.Views.Common
             }
             catch
             {
-                // ignoră — afișăm tot istoricul
+                // ignore — still show history
             }
 
             ReloadMessages();
@@ -85,7 +85,7 @@ namespace TravelAgency.WPF.Views.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Mesaj", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(ex.Message, "Message", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

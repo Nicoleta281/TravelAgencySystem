@@ -4,7 +4,7 @@ using System.Windows.Data;
 
 namespace TravelAgency.WPF.Converters;
 
-/// <summary>Mapare afișare RO pentru numele de status din model (EN), fără a schimba datele din DB.</summary>
+/// <summary>Display mapping for status names (kept English; normalizes unknown/empty values).</summary>
 public sealed class BookingStatusToRomanianConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -12,10 +12,11 @@ public sealed class BookingStatusToRomanianConverter : IValueConverter
         var key = value?.ToString()?.Trim() ?? "";
         return key switch
         {
-            "Pending" => "În așteptare",
-            "Confirmed" => "Confirmată",
-            "Rejected" => "Respinsă",
-            "Cancelled" => "Anulată",
+            "Pending" => "Pending",
+            "Confirmed" => "Confirmed",
+            "Rejected" => "Rejected",
+            "Cancelled" => "Cancelled",
+            "Canceled" => "Cancelled",
             _ => string.IsNullOrEmpty(key) ? "—" : key
         };
     }

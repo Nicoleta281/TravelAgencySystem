@@ -114,7 +114,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             set => Set(ref _agentBookings, value);
         }
 
-        private string _selectedReportType = "Toate rezervările";
+        private string _selectedReportType = "All Bookings";
         public string SelectedReportType
         {
             get => _selectedReportType;
@@ -382,7 +382,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 _userMessages,
                 me.Username,
                 client.Username,
-                $"Mesaje — {client.Username}");
+                $"Messages — {client.Username}");
             win.SetOwnerSafe();
             win.ShowDialog();
             RefreshInboxUnread();
@@ -1130,8 +1130,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             if (SelectedBooking == null)
             {
-                MessageBox.Show("Selectează mai întâi o cerere de rezervare din listă.",
-                                "Aprobare rezervare",
+                MessageBox.Show("Please select a booking request from the list first.",
+                                "Booking approval",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                 return;
@@ -1143,7 +1143,7 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
             if (!approvalResult.IsApproved)
             {
                 MessageBox.Show(approvalResult.Message,
-                                "Aprobare blocată",
+                                "Approval blocked",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                 return;
@@ -1159,15 +1159,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 _realBookingService.ConfirmBooking(bookingToApprove);
                 SelectedBooking = null;
 
-                MessageBox.Show("Rezervarea a fost aprobată cu succes.",
-                                "Aprobare rezervare",
+                MessageBox.Show("Booking approved successfully.",
+                                "Booking approval",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message,
-                                "Eroare stare",
+                                "Status error",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
             }
@@ -1177,8 +1177,8 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             if (SelectedBooking == null)
             {
-                MessageBox.Show("Selectează mai întâi o cerere de rezervare din listă.",
-                                "Respingere rezervare",
+                MessageBox.Show("Please select a booking request from the list first.",
+                                "Booking rejection",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                 return;
@@ -1194,15 +1194,15 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                 _realBookingService.RejectBooking(bookingToReject);
                 SelectedBooking = null;
 
-                MessageBox.Show("Rezervarea a fost respinsă.",
-                                "Respingere rezervare",
+                MessageBox.Show("Booking rejected.",
+                                "Booking rejection",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message,
-                                "Eroare stare",
+                                "Status error",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
             }
@@ -1339,16 +1339,16 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
                     "Agent");
 
                 MessageBox.Show(
-                    $"Raportul a fost generat:\n{outputPath}",
-                    "Succes",
+                    $"Report generated:\n{outputPath}",
+                    "Success",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Eroare:\n{ex.Message}",
-                    "Eroare",
+                    $"Error:\n{ex.Message}",
+                    "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
@@ -1361,13 +1361,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
 
             var filtered = SelectedReportType switch
             {
-                "În așteptare" or "Pending Bookings" => AllBookings
+                "Pending Bookings" => AllBookings
                     .Where(b => string.Equals(b.Status?.Name, "Pending", StringComparison.OrdinalIgnoreCase)),
 
-                "Confirmate" or "Confirmed Bookings" => AllBookings
+                "Confirmed Bookings" => AllBookings
                     .Where(b => string.Equals(b.Status?.Name, "Confirmed", StringComparison.OrdinalIgnoreCase)),
 
-                "Respinse" or "Rejected Bookings" => AllBookings
+                "Rejected Bookings" => AllBookings
                     .Where(b => string.Equals(b.Status?.Name, "Rejected", StringComparison.OrdinalIgnoreCase)),
 
                 _ => AllBookings
@@ -1487,13 +1487,13 @@ namespace TravelAgency.WPF.ViewModels.AgentVM
         {
             var title = bookingEvent.NewStatus switch
             {
-                "Confirmed" => "Rezervare confirmată",
-                "Rejected" => "Rezervare respinsă",
-                "Pending" => "Rezervare în așteptare",
-                _ => "Rezervare actualizată"
+                "Confirmed" => "Booking confirmed",
+                "Rejected" => "Booking rejected",
+                "Pending" => "Booking pending",
+                _ => "Booking updated"
             };
 
-            var message = $"{bookingEvent.Booking?.Client?.Username ?? "Client"} • {bookingEvent.Booking?.TripPackage?.Name ?? "Pachet"}";
+            var message = $"{bookingEvent.Booking?.Client?.Username ?? "Client"} • {bookingEvent.Booking?.TripPackage?.Name ?? "Package"}";
 
             var accent = bookingEvent.NewStatus switch
             {

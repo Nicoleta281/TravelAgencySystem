@@ -2,7 +2,7 @@ using System;
 
 namespace TravelAgency.Core.Models.Booking
 {
-    /// <summary>Etichete românești pentru stări de rezervare (UI notificări / rapoarte).</summary>
+    /// <summary>Human-readable booking status labels for UI.</summary>
     public static class BookingStatusDisplay
     {
         public static string ToRomanian(string? status)
@@ -13,6 +13,19 @@ namespace TravelAgency.Core.Models.Booking
                 "Confirmed" => "confirmată",
                 "Rejected" => "respinsă",
                 "Cancelled" => "anulată",
+                _ => string.IsNullOrWhiteSpace(status) ? "—" : status!
+            };
+        }
+
+        /// <summary>Canonical English labels for client notifications and English UI.</summary>
+        public static string ToEnglish(string? status)
+        {
+            return (status ?? "").Trim() switch
+            {
+                "Pending" => "Pending",
+                "Confirmed" => "Confirmed",
+                "Rejected" => "Rejected",
+                "Cancelled" => "Cancelled",
                 _ => string.IsNullOrWhiteSpace(status) ? "—" : status!
             };
         }

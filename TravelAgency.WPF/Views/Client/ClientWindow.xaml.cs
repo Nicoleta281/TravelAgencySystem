@@ -27,7 +27,7 @@ namespace TravelAgency.WPF.Views
                 if (trip.AvailableSeats <= 0 && vm.FavoritesVisibility != Visibility.Visible)
                 {
                     MessageBox.Show(
-                        "Nu mai sunt disponibile locuri la acest pachet.",
+                        "There are no seats left for this package.",
                         "Sold out",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
@@ -52,7 +52,7 @@ namespace TravelAgency.WPF.Views
             if (destIndex >= 0)
             {
                 var list = vm.DestinationImageUrls.ToList();
-                ImagePreviewWindow.ShowForUrls(this, "Destinație", list, destIndex);
+                ImagePreviewWindow.ShowForUrls(this, "Destination", list, destIndex);
                 e.Handled = true;
                 return;
             }
@@ -61,7 +61,7 @@ namespace TravelAgency.WPF.Views
             if (hotelIndex >= 0)
             {
                 var list = vm.HotelImageUrls.ToList();
-                ImagePreviewWindow.ShowForUrls(this, "Cazare", list, hotelIndex);
+                ImagePreviewWindow.ShowForUrls(this, "Accommodation", list, hotelIndex);
                 e.Handled = true;
                 return;
             }
@@ -107,7 +107,7 @@ namespace TravelAgency.WPF.Views
             return SameResourceIgnoringQuery(a, b);
         }
 
-        /// <summary>Extrage URL-ul original din <c>/api/images/proxy?url=...</c> (dacă e cazul).</summary>
+        /// <summary>Unwraps the original URL from <c>/api/images/proxy?url=...</c> when applicable.</summary>
         private static string? TryUnwrapImageProxyUrl(string url)
         {
             if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))

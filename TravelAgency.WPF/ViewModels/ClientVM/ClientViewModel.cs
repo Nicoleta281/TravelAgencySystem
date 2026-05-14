@@ -264,12 +264,12 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             }
         }
 
-        /// <summary>Antet + filtre pentru modul profil.</summary>
+        /// <summary>Header + filters chrome for profile mode.</summary>
         public bool ShowProfileChrome => _profileVisibility == Visibility.Visible;
 
         public bool ShowNotificationsChrome => _notificationsVisibility == Visibility.Visible;
 
-        /// <summary>Panoul din dreapta (detalii pachet / rezervare).</summary>
+        /// <summary>Right panel (package / booking details).</summary>
         public bool ShowClientRightPanel =>
             _profileVisibility != Visibility.Visible &&
             _notificationsVisibility != Visibility.Visible;
@@ -301,7 +301,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
         public bool HasNoBookings => MyBookings.Count == 0;
 
-        /// <summary>Rezervarea curentă în modul „Rezervările mele”; null în modul pachete sau fără selecție.</summary>
+        /// <summary>Current booking in My Bookings mode; null in packages mode or when nothing is selected.</summary>
         public Booking? SelectedBooking
         {
             get => _selectedBooking;
@@ -338,24 +338,24 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             }
         }
 
-        /// <summary>False când detaliile reflectă o rezervare — extra-urile nu mai recalculează totalul.</summary>
+        /// <summary>False when details reflect a booking — extras no longer drive the total.</summary>
         public bool DetailsExtrasEditable => _selectedBooking == null;
 
-        /// <summary>Suma extra-urilor bifate (pentru descompunerea prețului în panoul client).</summary>
+        /// <summary>Sum of selected extras (for the client price breakdown panel).</summary>
         public double SelectedExtrasSubtotal => AvailableExtras.Where(x => x.IsSelected).Sum(x => x.Price);
 
-        /// <summary>Afișează explicație când totalul stocat pe rezervare nu coincide cu baza + extra-uri (decoratori / istoric).</summary>
+        /// <summary>Show disclaimer when stored booking total does not match base + extras (decorators / history).</summary>
         public bool ShowBookingTotalDisclaimer =>
             _selectedBooking != null &&
             Math.Abs(TotalPrice - (BasePrice + SelectedExtrasSubtotal)) > 0.02;
 
-        /// <summary>True dacă există cel puțin un extra bifat — pentru rândul „Subtotal extra-uri” în sumar.</summary>
+        /// <summary>True when at least one extra is checked — drives the selected-extras subtotal row.</summary>
         public bool HasSelectedExtrasForPriceBreakdown => SelectedExtrasSubtotal > 0.005;
 
-        /// <summary>Panoul din dreapta are conținut pachet (browse sau pachet sincronizat din rezervare).</summary>
+        /// <summary>Right panel shows package content (browse or package synced from a booking).</summary>
         public bool HasPackageDetails => SelectedPackage != null;
 
-        /// <summary>Modul „pachete” fără pachet selectat — afișăm invitația de selecție.</summary>
+        /// <summary>Packages mode with no package selected — show selection prompt.</summary>
         public bool ShowPackageBrowseEmptyState =>
             _packagesVisibility == Visibility.Visible &&
             _favoritesVisibility != Visibility.Visible &&
@@ -363,18 +363,18 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             _notificationsVisibility != Visibility.Visible &&
             _selectedPackage == null;
 
-        /// <summary>Panoul din dreapta în modul Favorite, fără pachet selectat.</summary>
+        /// <summary>Right panel in Favorites mode with no package selected.</summary>
         public bool ShowFavoritesDetailsPlaceholder =>
             _favoritesVisibility == Visibility.Visible && _selectedPackage == null;
 
-        /// <summary>Browse pachete (nu Favorite / nu Rezervări / nu Profil / nu Notificări).</summary>
+        /// <summary>Browse packages (not Favorites / Bookings / Profile / Notifications).</summary>
         public bool IsBrowsePackagesSectionActive =>
             _packagesVisibility == Visibility.Visible &&
             _favoritesVisibility != Visibility.Visible &&
             _profileVisibility != Visibility.Visible &&
             _notificationsVisibility != Visibility.Visible;
 
-        /// <summary>Flux pachet: Browse sau Favorite (fără Profil / fără Notificări).</summary>
+        /// <summary>Package flow: Browse or Favorites (not Profile / Notifications).</summary>
         public bool ShowClientPackageFlowChrome =>
             (_packagesVisibility == Visibility.Visible || _favoritesVisibility == Visibility.Visible) &&
             _profileVisibility != Visibility.Visible &&
@@ -672,7 +672,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 _userMessages,
                 _currentClientUsername,
                 agentUsername,
-                $"Mesaje — agenție ({agentUsername})");
+                $"Messages — agency ({agentUsername})");
             win.SetOwnerSafe();
             win.ShowDialog();
             RefreshAgencyInboxUnread();
@@ -685,7 +685,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             FavoritesVisibility = Visibility.Collapsed;
             PackagesVisibility = Visibility.Visible;
             BookingsVisibility = Visibility.Collapsed;
-            // Detalii goale până alegi un pachet din listă (setter-ul golește și rezervarea curentă).
+            // Clear details until a package is selected from the list (setter also clears current booking).
             SelectedPackage = null;
         }
 
@@ -697,6 +697,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             PackagesVisibility = Visibility.Collapsed;
             FavoritesVisibility = Visibility.Visible;
             SelectedPackage = null;
+            RefreshClientTripPackageCache();
             ReloadFavoriteIdsFromDb();
         }
 
@@ -725,8 +726,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     ProfileEmail = "";
                     ProfilePhone = "";
                     ProfileIsBlocked = false;
-                    ProfileStatusHint = "Nu s-au putut încărca datele contului.";
-                    ProfileAccountSummaryLine = "Reîncearcă sau contactează suportul agenției.";
+                    ProfileStatusHint = "Could not load account data.";
+                    ProfileAccountSummaryLine = "Try again or contact agency support.";
                     ProfileBookingsCount = 0;
                     ProfileFavoritesCount = 0;
                     return;
@@ -739,11 +740,11 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 ProfilePhone = user.PhoneNumber ?? "";
                 ProfileIsBlocked = user.IsBlocked;
                 ProfileStatusHint = user.IsBlocked
-                    ? "Cont blocat — nu poți plasa rezervări noi. Contactează agenția."
+                    ? "Account blocked — you cannot place new bookings. Please contact the agency."
                     : "";
                 ProfileAccountSummaryLine = user.IsBlocked
-                    ? "Acces limitat: nu poți salva modificări sau rezerva până la deblocare."
-                    : "Cont activ — editează contactul mai jos. Parola se schimbă doar prin „Am uitat parola?” la autentificare (nu din acest ecran).";
+                    ? "Limited access: you cannot save changes or book until your account is unblocked."
+                    : "Active account — edit your contact details below. Password changes use “Forgot password?” on the sign-in screen (not from here).";
 
                 try
                 {
@@ -756,6 +757,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
                 try
                 {
+                    PruneStaleFavoriteRows();
                     ProfileFavoritesCount = _favoritesRepository.GetFavoriteTripPackageIds(_currentClientUsername).Count;
                 }
                 catch
@@ -767,7 +769,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             {
                 MessageBox.Show(
                     ex.Message,
-                    "Profil",
+                    "Profile",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -778,8 +780,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             if (ProfileIsBlocked)
             {
                 MessageBox.Show(
-                    "Contul este blocat. Modificările nu pot fi salvate.",
-                    "Profil",
+                    "Your account is blocked. Changes cannot be saved.",
+                    "Profile",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
                 return;
@@ -796,8 +798,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     if (at <= 0 || at == email.Length - 1 || email.IndexOf('@', at + 1) >= 0)
                     {
                         MessageBox.Show(
-                            "Adresa de e-mail nu pare validă.",
-                            "Profil",
+                            "That email address does not look valid.",
+                            "Profile",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
                         return;
@@ -808,8 +810,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 if (user == null)
                 {
                     MessageBox.Show(
-                        "Contul nu a fost găsit.",
-                        "Profil",
+                        "Account not found.",
+                        "Profile",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return;
@@ -821,8 +823,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                     if (other != null && other.Id != user.Id)
                     {
                         MessageBox.Show(
-                            "Acest e-mail este deja folosit de alt cont.",
-                            "Profil",
+                            "This email is already used by another account.",
+                            "Profile",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
                         return;
@@ -842,8 +844,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
 
                 LoadProfileFromDb();
                 MessageBox.Show(
-                    "Profilul a fost salvat.",
-                    "Profil",
+                    "Profile saved.",
+                    "Profile",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
@@ -851,9 +853,43 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             {
                 MessageBox.Show(
                     ex.Message,
-                    "Profil",
+                    "Profile",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
+            }
+        }
+
+        private void RefreshClientTripPackageCache()
+        {
+            try
+            {
+                _allPackages.Clear();
+                _allPackages.AddRange(_tripPackageRepository.GetAll());
+                RebuildTripTypeFilterOptions();
+                RebuildFilteredPackages();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Packages",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        /// <summary>Removes favorite rows whose trip package no longer exists (e.g. deleted by an agent).</summary>
+        private void PruneStaleFavoriteRows()
+        {
+            var favoriteIds = _favoritesRepository.GetFavoriteTripPackageIds(_currentClientUsername);
+            if (favoriteIds.Count == 0)
+                return;
+
+            var existingIds = new HashSet<int>(_allPackages.Select(p => p.Id));
+            foreach (var id in favoriteIds)
+            {
+                if (!existingIds.Contains(id))
+                    _favoritesRepository.Remove(_currentClientUsername, id);
             }
         }
 
@@ -861,6 +897,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         {
             try
             {
+                PruneStaleFavoriteRows();
                 _favoritePackageIds.Clear();
                 foreach (var id in _favoritesRepository.GetFavoriteTripPackageIds(_currentClientUsername))
                     _favoritePackageIds.Add(id);
@@ -874,8 +911,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Nu s-au putut încărca favoritele: {ex.Message}",
-                    "Favorite",
+                    $"Could not load favorites: {ex.Message}",
+                    "Favorites",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -926,7 +963,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
             {
                 MessageBox.Show(
                     ex.Message,
-                    "Favorite",
+                    "Favorites",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -1178,8 +1215,8 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                         var list = images.EnumerateArray()
                             .Select(x =>
                             {
-                                // Preferă URL-ul principal (ex. Unsplash „regular” ~1080px), nu thumbUrl („small” ~400px),
-                                // altfel preview-ul și zoom-ul arată pixelat.
+                                // Prefer main image URL (e.g. Unsplash "regular" ~1080px), not thumbUrl ("small" ~400px),
+                                // otherwise preview and zoom look pixelated.
                                 var full = (x.TryGetProperty("url", out var u) ? (u.GetString() ?? "") : "").Trim();
                                 if (full.Length > 0)
                                     return full;
@@ -1450,11 +1487,11 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // filtrăm DOAR booking-urile clientului curent
+                // keep only the current client's bookings
                 if (bookingEvent.Booking.Client?.Username != _currentClientUsername)
                     return;
 
-                // găsim booking-ul în listă
+                // find booking in list
                 var existing = MyBookings
                     .FirstOrDefault(b => b.Id == bookingEvent.Booking.Id);
 
@@ -1466,7 +1503,7 @@ namespace TravelAgency.WPF.ViewModels.ClientVM
                 }
 
                 HydrateTripPackagesForBookings(new[] { bookingEvent.Booking });
-                // adăugăm versiunea nouă (cu status updated)
+                // insert updated version (new status)
                 MyBookings.Insert(0, bookingEvent.Booking);
 
                 var keepId = SelectedBooking?.Id;

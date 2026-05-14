@@ -45,6 +45,10 @@ namespace TravelAgency.Core.Data.Repositories
             if (entity == null)
                 return;
 
+            var orphanFavorites = db.ClientPackageFavorites.Where(f => f.TripPackageId == id).ToList();
+            if (orphanFavorites.Count > 0)
+                db.ClientPackageFavorites.RemoveRange(orphanFavorites);
+
             db.TripPackages.Remove(entity);
             db.SaveChanges();
 

@@ -1,7 +1,7 @@
 <Window x:Class="TravelAgency.WPF.Views.Common.UserConversationWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Mesaje"
+        Title="Messages"
         Height="520"
         Width="440"
         MinHeight="360"
@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock x:Name="TitleText"
-                   Text="Conversație"
+                   Text="Conversation"
                    FontSize="18"
                    FontWeight="SemiBold"
                    Foreground="#0F172A"
@@ -81,9 +81,9 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <!-- Fără mesaje încă: zona pare „goală”; aici explicăm (acest ecran e doar text, nu imagini). -->
+                <!-- Empty state: explain that this view is text-only. -->
                 <TextBlock x:Name="EmptyHint"
-                           Text="Încă nu există mesaje text în această conversație.&#x0a;Scrie mai jos și apasă „Trimite”.&#x0a;&#x0a;(Imaginile pachetelor apar la pachete / detalii, nu în fereastra de mesaje.)"
+                           Text="No text messages in this conversation yet.&#x0a;Type below and press &quot;Send&quot;.&#x0a;&#x0a;(Package images appear on package screens, not in messages.)"
                            TextAlignment="Center"
                            TextWrapping="Wrap"
                            VerticalAlignment="Center"
@@ -110,7 +110,7 @@
                  BorderThickness="1"/>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Trimite"
+            <Button Content="Send"
                     Width="100"
                     Height="36"
                     IsDefault="True"
@@ -119,7 +119,7 @@
                     Foreground="White"
                     BorderThickness="0"
                     FontWeight="SemiBold"/>
-            <Button Content="Închide"
+            <Button Content="Close"
                     Width="88"
                     Height="36"
                     Margin="10,0,0,0"

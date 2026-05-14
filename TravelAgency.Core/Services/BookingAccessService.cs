@@ -49,17 +49,17 @@ namespace TravelAgency.Core.Services
                 trip.PricingNotes.Trim().Equals("DRAFT", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    "Acest pachet este încă în draft și nu poate fi rezervat. Te rugăm să alegi alt pachet.");
+                    "This package is still a draft and cannot be booked. Please choose another package.");
             }
 
             // Invariant: TripPackage.AvailableSeats == totalCapacity - count(Confirmed).
-            // Pending nu decrementează AvailableSeats până la confirmare, deci locuri „rezervate” de cereri
-            // în așteptare = doar Pending. Nu comparăm (Pending+Confirmed) cu AvailableSeats (ar număra C de două ori).
+            // Pending does not decrement AvailableSeats until confirmation, so seats held by pending
+            // requests = Pending only. We do not compare (Pending+Confirmed) to AvailableSeats (would double-count Confirmed).
             var pendingCount = _bookingRepository.CountByTripPackageIdAndStatuses(tripPackageId, "Pending");
             if (pendingCount >= trip.AvailableSeats)
             {
                 throw new InvalidOperationException(
-                    "Nu mai sunt disponibile locuri la acest pachet. Te rugăm să alegi alt pachet.");
+                    "There are no seats left for this package. Please choose another package.");
             }
 
             _bookingRepository.Add(booking);

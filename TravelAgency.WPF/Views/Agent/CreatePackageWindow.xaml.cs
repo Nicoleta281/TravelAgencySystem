@@ -1601,8 +1601,8 @@ namespace TravelAgency.WPF.Views.Agent
                     if (string.IsNullOrWhiteSpace(_selectedDestinationCoverUrl))
                     {
                         MessageBox.Show(
-                            "Te rog alege o imagine de copertă pentru pachet (click pe una din imaginile destinației).",
-                            "Copertă lipsă",
+                            "Please pick a cover image for the package (click one of the destination images).",
+                            "Cover missing",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
                         return;

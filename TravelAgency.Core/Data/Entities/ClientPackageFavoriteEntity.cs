@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TravelAgency.Core.Data.Entities
 {
-    /// <summary>Favorite pachet salvat de un client (identificat prin username, ca la rezervări).</summary>
+    /// <summary>Client-saved favorite trip package (client identified by username, same as bookings).</summary>
     public class ClientPackageFavoriteEntity
     {
         [Key]

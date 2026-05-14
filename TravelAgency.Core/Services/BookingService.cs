@@ -52,14 +52,14 @@ namespace TravelAgency.Core.Services
             if (trip == null)
                 throw new InvalidOperationException("Trip package no longer exists.");
 
-            // Confirmare: AvailableSeats reflectă deja locurile rămase după rezervările confirmate (T − C).
-            // Nu folosim count(Pending+Confirmed) față de AvailableSeats — ar trata C de două ori.
+            // Confirmation: AvailableSeats already reflects seats left after confirmed bookings (T − C).
+            // We do not compare count(Pending+Confirmed) to AvailableSeats — that would double-count Confirmed.
             if (string.Equals(oldStatus, "Pending", StringComparison.OrdinalIgnoreCase))
             {
                 if (trip.AvailableSeats <= 0)
                 {
                     throw new InvalidOperationException(
-                        "Nu mai sunt disponibile locuri pentru acest pachet. Te rugăm să alegi alt pachet sau să încerci mai târziu.");
+                        "There are no seats left for this package. Please choose another package or try again later.");
                 }
 
                 trip.AvailableSeats -= 1;
